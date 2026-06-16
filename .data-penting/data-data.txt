@@ -1,0 +1,5 @@
+TOKEN   : 8763510148:AAHvNKp6uTrRZUo-1oBRKBS2n0xYejswQp0
+API     :https://api.telegram.org/bot8763510148:AAHvNKp6uTrRZUo-1oBRKBS2n0xYejswQp0/sendMessage?chat_id=835713081&text=
+
+Supabase (akun github ryuseokwan)    : #Senimankamera*
+Connection Strring                   : postgresql://postgres:#Senimankamera*@db.bwxixkvkpyvcmchtilgw.supabase.co:5432/postgres
