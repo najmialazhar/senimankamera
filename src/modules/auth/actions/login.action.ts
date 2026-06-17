@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createClient } from "@/src/infrastructure/supabase/server";
 
-export async function loginAction(formData: FormData) {
+export async function loginAction(prevState: any, formData: FormData) {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
 
@@ -12,19 +12,28 @@ export async function loginAction(formData: FormData) {
     return { error: "Email and password are required." };
   }
 
-  // Set auth cookie (expires in 1 day)
-  const cookieStore = await cookies();
-  cookieStore.set("auth_session", "true", {
-    path: "/",
-    httpOnly: true,
-    maxAge: 60 * 60 * 24, // 1 day
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
   });
 
+  if (error) {
+    return { error: error.message };
+  }
+
   redirect("/admin");
+  return { error: null };
 }
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete("auth_session");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signOut();
+  
+  if (error) {
+    console.error("Error signing out from Supabase:", error.message);
+  }
+
   redirect("/login");
 }
+

@@ -37,7 +37,7 @@ export default async function AdminPage() {
   const getRecentBookingsUseCase = new GetRecentBookingsUseCase(repository);
   const dbBookings = await getRecentBookingsUseCase.execute(10);
 
-  const bookingRequests = dbBookings.map((req) => {
+  const bookingRequests = dbBookings.map((req: any) => {
     const clientName = req.client.fullName;
     const initialLetter = clientName.charAt(0).toUpperCase() || "?";
     const dateFormatted = new Intl.DateTimeFormat("en-US", {
@@ -164,7 +164,7 @@ export default async function AdminPage() {
                 </CardHeader>
                 <CardContent className="p-0 border-t border-border/30">
                   <div className="divide-y divide-border/20">
-                    {bookingRequests.map((req) => (
+                    {bookingRequests.map((req: any) => (
                       <div
                         key={req.id}
                         className="p-6 flex items-center justify-between gap-4 hover:bg-muted/10 transition-colors"

@@ -1,5 +1,6 @@
-TOKEN   : 8763510148:AAHvNKp6uTrRZUo-1oBRKBS2n0xYejswQp0
-API     :https://api.telegram.org/bot8763510148:AAHvNKp6uTrRZUo-1oBRKBS2n0xYejswQp0/sendMessage?chat_id=835713081&text=
-
+TOKEN   : 8896532615:AAGJY_QSjpr7A7Nc3Syyk53_lcOS83sUEcw
+API     : https://api.telegram.org/bot8896532615:AAGJY_QSjpr7A7Nc3Syyk53_lcOS83sUEcw/sendMessage?chat_id=-1003610684037&text=HI+Najmi!
+test token: https://api.telegram.org/bot8896532615:AAGJY_QSjpr7A7Nc3Syyk53_lcOS83sUEcw/getMe
+test token update : https://api.telegram.org/bo8896532615:AAGJY_QSjpr7A7Nc3Syyk53_lcOS83sUEcw/getUpdates
 Supabase (akun github ryuseokwan)    : #Senimankamera*
 Connection Strring                   : postgresql://postgres:#Senimankamera*@db.bwxixkvkpyvcmchtilgw.supabase.co:5432/postgres

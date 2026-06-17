@@ -1,0 +1,216 @@
+"use client";
+
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { Check, Clock, Users, BookOpen, Image as ImageIcon, MapPin, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface CategoryItem {
+  id: string;
+  name: string;
+  label: string;
+  description: string | null;
+}
+
+interface PackageItem {
+  id: string;
+  name: string;
+  categoryId: string;
+  category?: CategoryItem | null;
+  price: number;
+  features: string[];
+  description: string | null;
+}
+
+interface StepPilihPaketProps {
+  initialPackages: PackageItem[];
+  categories: CategoryItem[];
+  selectedPackageName: string;
+  onSelectPackage: (packageName: string) => void;
+  onNext: () => void;
+}
+
+export function StepPilihPaket({
+  initialPackages,
+  categories,
+  selectedPackageName,
+  onSelectPackage,
+  onNext,
+}: StepPilihPaketProps) {
+  // Find category of currently selected package (if any)
+  const currentSelectedPkg = initialPackages.find(p => p.name === selectedPackageName);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(
+    currentSelectedPkg ? currentSelectedPkg.categoryId : null
+  );
+
+  const activePackages = selectedCategory
+    ? initialPackages.filter((pkg) => pkg.categoryId === selectedCategory)
+    : [];
+
+
+
+  const renderIcon = (index: number) => {
+    const icons = [
+      <Clock key="clock" className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />,
+      <Users key="users" className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />,
+      <ImageIcon key="image" className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />,
+      <BookOpen key="book" className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />,
+      <MapPin key="map" className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+    ];
+    return icons[index % icons.length] || <Check key="check" className="w-4 h-4 text-secondary flex-shrink-0 mt-0.5" />;
+  };
+
+  return (
+    <div className="space-y-10">
+      <div className="text-center max-w-md mx-auto">
+        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-secondary mb-2 block font-bold">
+          Langkah 1 dari 5
+        </span>
+        <h2 className="font-serif text-2xl md:text-3xl text-primary mb-2 font-medium">Pilih Paket Layanan</h2>
+        <p className="font-sans text-xs text-secondary font-light leading-relaxed">
+          Silakan pilih kategori acara terlebih dahulu, lalu pilih paket layanan yang paling sesuai dengan kebutuhan Anda.
+        </p>
+      </div>
+
+      {/* Categories Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {categories.map((cat) => {
+          const isSelected = selectedCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategory(cat.id)}
+              className={cn(
+                "p-5 text-left border transition-all duration-300 group cursor-pointer flex flex-col justify-between h-[150px] rounded-none",
+                isSelected
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border/40 bg-card hover:border-primary/60 text-foreground"
+              )}
+            >
+              <div>
+                <h3 className="font-serif text-base font-medium leading-tight mb-2">
+                  {cat.label}
+                </h3>
+                {cat.description && (
+                  <p className={cn(
+                    "font-sans text-[11px] font-light leading-relaxed line-clamp-3",
+                    isSelected ? "text-primary-foreground/90" : "text-secondary"
+                  )}>
+                    {cat.description}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex justify-end w-full">
+                <span className={cn(
+                  "font-sans text-[9px] uppercase tracking-wider font-bold transition-all duration-300 group-hover:translate-x-1",
+                  isSelected ? "text-primary-foreground" : "text-primary"
+                )}>
+                  {isSelected ? "Terpilih ✓" : "Pilih Kategori →"}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Package Selection */}
+      <div className="min-h-[200px]">
+        {!selectedCategory ? (
+          <div className="border border-dashed border-border/60 p-8 text-center flex flex-col items-center justify-center bg-muted/10">
+            <Sparkles className="w-8 h-8 text-secondary mb-3 stroke-1 animate-pulse" />
+            <h4 className="font-serif text-lg text-primary mb-1 font-medium">Jelajahi Paket</h4>
+            <p className="font-sans text-xs text-secondary font-light max-w-xs leading-relaxed">
+              Pilih salah satu kategori acara di atas untuk melihat tarif dan rincian paket kami.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="border-b border-border/20 pb-2">
+              <h3 className="font-serif text-xl text-primary font-medium">
+                Pilihan Paket {categories.find(c => c.id === selectedCategory)?.label || "Kategori"}
+              </h3>
+            </div>
+
+            {activePackages.length === 0 ? (
+              <div className="text-center py-8 border border-border/30 text-secondary font-sans text-xs">
+                Tidak ada paket aktif ditemukan dalam kategori ini.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {activePackages.map((pkg) => {
+                  const isSelected = selectedPackageName === pkg.name;
+
+                  return (
+                    <div
+                      key={pkg.id}
+                      onClick={() => onSelectPackage(pkg.name)}
+                      className={cn(
+                        "border p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[350px] rounded-none bg-card relative",
+                        isSelected
+                          ? "border-primary ring-1 ring-primary"
+                          : "border-border/40 hover:border-primary/60"
+                      )}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-4 right-4 bg-primary text-primary-foreground p-1 rounded-none">
+                          <Check className="w-4 h-4" />
+                        </div>
+                      )}
+                      
+                      <div>
+                        <h4 className="font-serif text-xl text-primary mb-2 font-medium">
+                          {pkg.name}
+                        </h4>
+                        {pkg.description && (
+                          <p className="font-sans text-xs text-secondary mb-4 font-light leading-relaxed">
+                            {pkg.description}
+                          </p>
+                        )}
+                        
+                        <div className="text-2xl font-serif text-primary mb-5 border-b border-border/20 pb-4 font-medium">
+                          {"Rp. " + pkg.price.toLocaleString("id-ID")}
+                        </div>
+
+                        <ul className="space-y-2.5 font-sans text-[11px] text-secondary mb-6">
+                          {pkg.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              {renderIcon(idx)}
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant={isSelected ? "default" : "outline"}
+                        className="w-full font-sans text-[10px] uppercase tracking-widest py-4 rounded-none mt-auto"
+                      >
+                        {isSelected ? "Paket Terpilih" : "Pilih Paket Ini"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Next navigation action */}
+      {selectedPackageName && (
+        <div className="flex justify-end pt-4 border-t border-border/20">
+          <Button
+            type="button"
+            onClick={onNext}
+            className="font-sans text-xs uppercase tracking-widest py-5 px-10 rounded-none font-bold text-white transition-all hover:opacity-90 cursor-pointer"
+          >
+            Lanjut ke Tanggal & Waktu →
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

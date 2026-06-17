@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: any | undefined;
 };
 
 const connectionString = process.env.DATABASE_URL;
@@ -11,6 +11,11 @@ const connectionString = process.env.DATABASE_URL;
 // Create connection pool and Prisma adapter
 const pool = new pg.Pool({ connectionString });
 const adapter = new PrismaPg(pool);
+
+// Force recreate client if hot reload holds an old client instance without the new category model
+if (globalForPrisma.prisma && !globalForPrisma.prisma.category) {
+  globalForPrisma.prisma = undefined;
+}
 
 export const prisma =
   globalForPrisma.prisma ??

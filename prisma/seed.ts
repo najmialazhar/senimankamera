@@ -6,6 +6,7 @@ async function main() {
   await prisma.client.deleteMany({});
   await prisma.gallery.deleteMany({});
   await prisma.package.deleteMany({});
+  await prisma.category.deleteMany({});
 
   console.log("Seeding galleries...");
   const items = [
@@ -98,13 +99,29 @@ async function main() {
     });
   }
 
+  console.log("Seeding categories...");
+  const defaultCategories = [
+    { name: "Wedding", label: "Pernikahan", description: "Paket dokumentasi hari pernikahan yang berkesan.", order: 1 },
+    { name: "Portraits", label: "Potret", description: "Paket foto studio atau luar ruangan personal/profesional.", order: 2 },
+    { name: "Prewedding", label: "Pranikah", description: "Paket foto pertunangan atau dokumentasi sebelum pernikahan.", order: 3 },
+    { name: "Graduation", label: "Wisuda", description: "Paket foto perayaan kelulusan dan momen akademik penting.", order: 4 },
+    { name: "Events", label: "Acara", description: "Dokumentasi acara formal, gathering keluarga, atau pesta.", order: 5 },
+  ];
+
+  const categoryMap: Record<string, string> = {};
+  for (const cat of defaultCategories) {
+    const created = await prisma.category.create({
+      data: cat,
+    });
+    categoryMap[cat.name] = created.id;
+  }
+
   console.log("Seeding packages...");
   const packages = [
     {
       name: "Signature Wedding",
-      category: "Wedding",
-      price: 4500,
-      priceUnit: "starts at",
+      categoryId: categoryMap["Wedding"],
+      price: 67500000,
       features: [
         "Up to 10 hours of consecutive coverage",
         "Two lead photographers for diverse perspectives",
@@ -116,9 +133,8 @@ async function main() {
     },
     {
       name: "Artistic Portrait",
-      category: "Portraits",
-      price: 850,
-      priceUnit: "starts at",
+      categoryId: categoryMap["Portraits"],
+      price: 12750000,
       features: [
         "2 hours of on-location or studio shooting",
         "50 hand-retouched editorial images",
@@ -128,9 +144,8 @@ async function main() {
     },
     {
       name: "Event Documentation",
-      category: "Events",
-      price: 400,
-      priceUnit: "/ hour",
+      categoryId: categoryMap["Events"],
+      price: 6000000,
       features: [
         "Candid, unobtrusive photojournalism style",
         "Rapid 48-hour turnaround for select PR images",
@@ -140,9 +155,8 @@ async function main() {
     },
     {
       name: "Milestone Graduation",
-      category: "Graduation",
-      price: 600,
-      priceUnit: "starts at",
+      categoryId: categoryMap["Graduation"],
+      price: 9000000,
       features: [
         "1.5 hours of outdoor campus session",
         "30 fully edited high-resolution digital files",

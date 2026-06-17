@@ -21,6 +21,14 @@ export function PortfolioGrid({ initialItems }: PortfolioGridProps) {
   const [activeFilter, setActiveFilter] = useState("All");
 
   const categories = ["All", "Wedding", "Prewedding", "Graduation", "Portraits", "Events"];
+  const categoryLabels: Record<string, string> = {
+    All: "Semua",
+    Wedding: "Pernikahan",
+    Prewedding: "Pranikah",
+    Graduation: "Wisuda",
+    Portraits: "Potret",
+    Events: "Acara",
+  };
 
   const filteredItems = activeFilter === "All"
     ? initialItems
@@ -31,10 +39,10 @@ export function PortfolioGrid({ initialItems }: PortfolioGridProps) {
       {/* Header Section */}
       <section className="flex flex-col items-center text-center mb-16 max-w-2xl mx-auto">
         <h1 className="font-serif text-4xl md:text-6xl text-primary mb-4 font-medium">
-          Curated Works
+          Karya Pilihan
         </h1>
         <p className="font-sans text-base md:text-lg text-secondary font-light leading-relaxed">
-          A collection of moments captured through the lens, where light meets emotion in an editorial style.
+          Koleksi momen berharga yang diabadikan melalui lensa, memadukan keindahan cahaya dan emosi dalam gaya editorial yang elegan.
         </p>
       </section>
 
@@ -51,7 +59,7 @@ export function PortfolioGrid({ initialItems }: PortfolioGridProps) {
                 : "text-secondary hover:text-primary"
             )}
           >
-            {cat}
+            {categoryLabels[cat] || cat}
           </button>
         ))}
       </section>
@@ -97,7 +105,7 @@ export function PortfolioGrid({ initialItems }: PortfolioGridProps) {
       {/* Load More Action */}
       <div className="flex justify-center mt-16">
         <button className="border border-primary text-primary bg-transparent font-sans text-xs uppercase tracking-widest px-8 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors font-bold rounded-none cursor-pointer">
-          Load More Works
+          Lihat Lebih Banyak Karya
         </button>
       </div>
     </div>

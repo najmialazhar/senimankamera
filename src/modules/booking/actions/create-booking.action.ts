@@ -21,6 +21,9 @@ export async function createBookingAction(input: CreateBookingInputType) {
         phoneNumber: input.phoneNumber || undefined,
         packageType: input.packageType,
         bookingDate: new Date(input.bookingDate),
+        eventTime: input.eventTime,
+        eventName: input.eventName,
+        eventLocation: input.eventLocation,
         notes: input.notes || undefined,
       });
     } catch (telegramError) {
@@ -34,6 +37,10 @@ export async function createBookingAction(input: CreateBookingInputType) {
       success: true,
       data: {
         id: booking.id,
+        snapToken: booking.snapToken,
+        snapUrl: booking.snapUrl,
+        dpAmount: booking.dpAmount,
+        totalAmount: booking.totalAmount,
       },
     };
   } catch (error: any) {

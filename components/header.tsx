@@ -22,10 +22,10 @@ export function Header() {
   }, []);
 
   const navLinks = [
-    { name: "Home", href: "/" },
-    { name: "Portfolio", href: "/portfolio" },
-    { name: "Services", href: "/services" },
-    { name: "Contact", href: "/#contact" },
+    { name: "Beranda", href: "/" },
+    { name: "Portofolio", href: "/portfolio" },
+    { name: "Layanan", href: "/services" },
+    { name: "Kontak", href: "/#contact" },
   ];
 
   const isActive = (href: string) => {
@@ -92,7 +92,7 @@ export function Header() {
                 "font-sans text-xs uppercase tracking-[0.15em] px-8 py-6 rounded-none"
               )}
             >
-              Book a Session
+              Pesan Sesi
             </Link>
           </div>
 
@@ -136,7 +136,7 @@ export function Header() {
                 "w-full font-sans text-xs uppercase tracking-[0.15em] py-6 rounded-none text-center"
               )}
             >
-              Book a Session
+              Pesan Sesi
             </Link>
           </div>
         </div>

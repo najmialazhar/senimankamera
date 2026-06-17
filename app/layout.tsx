@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Manrope } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ModalProvider } from "@/components/modal-provider";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -30,7 +31,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <TooltipProvider>{children}</TooltipProvider>
+        <ModalProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+        </ModalProvider>
       </body>
     </html>
   );

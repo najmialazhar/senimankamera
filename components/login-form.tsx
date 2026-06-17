@@ -12,24 +12,16 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"form">) {
   const [state, formAction, isPending] = useActionState(
-    async (prevState: any, formData: FormData) => {
-      try {
-        await loginAction(formData);
-        return { error: null };
-      } catch (err: any) {
-        // Since loginAction redirects, this catch block is only for errors
-        return { error: err.message || "Failed to login" };
-      }
-    },
-    { error: null }
+    loginAction,
+    { error: null as string | null }
   );
 
   return (
     <form action={formAction} className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center mb-4">
-        <h1 className="font-serif text-3xl font-medium tracking-tight">Studio Admin Sign In</h1>
+        <h1 className="font-serif text-3xl font-medium tracking-tight">Masuk Admin Studio</h1>
         <p className="font-sans text-xs text-secondary tracking-wide uppercase">
-          Enter credentials to manage the studio
+          Masukkan kredensial untuk mengelola studio
         </p>
       </div>
 
@@ -42,7 +34,7 @@ export function LoginForm({
 
         <div className="space-y-2">
           <Label htmlFor="email" className="font-sans text-xs uppercase tracking-widest text-secondary font-bold">
-            Email Address
+            Alamat Email
           </Label>
           <Input
             id="email"
@@ -55,17 +47,9 @@ export function LoginForm({
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="font-sans text-xs uppercase tracking-widest text-secondary font-bold">
-              Password
-            </Label>
-            <a
-              href="#"
-              className="text-xs text-secondary underline hover:text-primary transition-colors"
-            >
-              Forgot?
-            </a>
-          </div>
+          <Label htmlFor="password" className="font-sans text-xs uppercase tracking-widest text-secondary font-bold">
+            Kata Sandi
+          </Label>
           <Input
             id="password"
             name="password"
@@ -81,7 +65,7 @@ export function LoginForm({
           disabled={isPending}
           className="w-full font-sans text-xs uppercase tracking-widest py-6 rounded-none mt-2"
         >
-          {isPending ? "Signing In..." : "Sign In"}
+          {isPending ? "Masuk..." : "Masuk"}
         </Button>
       </div>
     </form>

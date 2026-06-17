@@ -14,6 +14,11 @@ model Gallery {
   imageUrl    String
   aspect      String
   description String?
+  mediaType   String   @default("image")
+  storagePath String?
+  fileSize    Int?
+  width       Int?
+  height      Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -29,14 +34,35 @@ model Client {
 }
 
 model Booking {
+  id            String        @id @default(uuid())
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  packageType   String
+  bookingDate   DateTime
+  eventDate     DateTime?
+  eventTime     String?
+  eventName     String?
+  eventLocation String?
+  notes         String?
+  status        String        @default("PendingApproval")
+  paymentStatus String        @default("PENDING")
+  snapToken     String?
+  snapUrl       String?
+  dpAmount      Float?
+  totalAmount   Float?
+  source        String        @default("website") // "website" | "manual"
+  calendarSlot  CalendarSlot?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Category {
   id          String    @id @default(uuid())
-  clientId    String
-  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  packageType String
-  bookingDate DateTime
-  eventDate   DateTime?
-  notes       String?
-  status      String    @default("PENDING")
+  name        String    @unique  // e.g. "Wedding", "Portraits"
+  label       String             // e.g. "Pernikahan", "Potret"
+  description String?            // Deskripsi singkat untuk halaman booking
+  order       Int       @default(0)
+  packages    Package[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -44,11 +70,24 @@ model Booking {
 model Package {
   id          String   @id @default(uuid())
   name        String
-  category    String
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
   price       Float
-  priceUnit   String?
   features    String[]
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model CalendarSlot {
+  id            String   @id @default(uuid())
+  date          DateTime @unique
+  status        String   // PendingApproval, Approved, ManualBooking, ManualBlock
+  bookingId     String?  @unique
+  booking       Booking? @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  blockedReason String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+

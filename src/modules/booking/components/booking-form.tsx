@@ -3,48 +3,115 @@
 import { useState, useTransition, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createBookingAction } from "../actions/create-booking.action";
+import { getBookedDatesWithInfoAction } from "../actions/get-booked-dates-with-info.action";
 import { CreateBookingSchema } from "../schemas/create-booking.schema";
-import { Calendar, User, Mail, Phone, BookOpen, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export function BookingForm() {
+// Wizard steps components
+import { StepPilihPaket } from "./step-pilih-paket";
+import { StepPilihTanggal } from "./step-pilih-tanggal";
+import { StepDataPemesan } from "./step-data-pemesan";
+import { StepPembayaran } from "./step-pembayaran";
+
+interface CategoryItem {
+  id: string;
+  name: string;
+  label: string;
+  description: string | null;
+}
+
+interface PackageItem {
+  id: string;
+  name: string;
+  categoryId: string;
+  category?: CategoryItem | null;
+  price: number;
+  features: string[];
+  description: string | null;
+}
+
+interface BookedDateInfo {
+  date: string;
+  eventName: string;
+  clientName: string;
+  status: string;
+}
+
+interface BookingFormProps {
+  initialPackages: PackageItem[];
+  categories: CategoryItem[];
+  bookedDatesInfo: BookedDateInfo[];
+}
+
+export function BookingForm({ initialPackages, categories, bookedDatesInfo }: BookingFormProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // Inputs
+  // Wizard Step
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Form Inputs
+  const [packageType, setPackageType] = useState("");
+  const [bookingDate, setBookingDate] = useState("");
+  const [eventTime, setEventTime] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [packageType, setPackageType] = useState("");
-  const [bookingDate, setBookingDate] = useState("");
+  const [eventName, setEventName] = useState("");
+  const [eventLocation, setEventLocation] = useState("");
   const [notes, setNotes] = useState("");
 
   // States
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [bookedDates, setBookedDates] = useState<BookedDateInfo[]>(bookedDatesInfo || []);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState<{
+    id: string;
+    dpAmount: number | null;
+    totalAmount: number | null;
+  } | null>(null);
 
-  // Set initial package from query param
+  // Fetch updated booked dates client-side
+  useEffect(() => {
+    async function loadBookedDates() {
+      const response = await getBookedDatesWithInfoAction();
+      if (response.success && response.data) {
+        setBookedDates(response.data);
+      }
+    }
+    loadBookedDates();
+  }, []);
+
+  // Pre-fill packageType from query param
   useEffect(() => {
     const pkg = searchParams.get("package");
     if (pkg) {
-      // Normalize package name
-      if (pkg.toLowerCase() === "wedding" || pkg.toLowerCase() === "signature wedding") {
-        setPackageType("Wedding");
-      } else if (pkg.toLowerCase() === "portrait" || pkg.toLowerCase() === "portraits" || pkg.toLowerCase() === "artistic portrait") {
-        setPackageType("Portraits");
-      } else if (pkg.toLowerCase() === "editorial" || pkg.toLowerCase() === "vogue editorial") {
-        setPackageType("Editorial");
-      } else if (pkg.toLowerCase() === "events" || pkg.toLowerCase() === "event" || pkg.toLowerCase() === "event documentation") {
-        setPackageType("Events");
+      const matched = initialPackages.find(
+        (p) => p.name.toLowerCase() === pkg.toLowerCase()
+      );
+      if (matched) {
+        setPackageType(matched.name);
       }
     }
-  }, [searchParams]);
+  }, [searchParams, initialPackages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
+  // Find selected package object to get price details
+  const selectedPackageObj = initialPackages.find((p) => p.name === packageType);
+  const packagePrice = selectedPackageObj?.price || 0;
+
+  const handleNext = () => {
+    setServerError(null);
+    setCurrentStep((prev) => prev + 1);
+  };
+
+  const handleBack = () => {
+    setServerError(null);
+    setCurrentStep((prev) => prev - 1);
+  };
+
+  const handleSubmitBooking = async () => {
     setServerError(null);
 
     const formData = {
@@ -53,71 +120,161 @@ export function BookingForm() {
       phoneNumber,
       packageType,
       bookingDate,
+      eventTime,
+      eventName,
+      eventLocation,
       notes,
+      paymentType: "dp" as const,
     };
 
-    // Client-side validation
+    // Client-side validation using Zod
     const validation = CreateBookingSchema.safeParse(formData);
     if (!validation.success) {
-      const fieldErrors: Record<string, string> = {};
-      validation.error.issues.forEach((err) => {
-        if (err.path[0]) {
-          fieldErrors[err.path[0] as string] = err.message;
-        }
-      });
-      setErrors(fieldErrors);
+      setServerError(
+        validation.error.issues[0]?.message || "Gagal memvalidasi formulir."
+      );
       return;
     }
 
-    // Server submission
     startTransition(async () => {
       const response = await createBookingAction(validation.data);
-      if (response.success) {
-        setIsSuccess(true);
+      if (response.success && response.data) {
+        setCreatedBooking({
+          id: response.data.id,
+          dpAmount: response.data.dpAmount,
+          totalAmount: response.data.totalAmount,
+        });
+        setCurrentStep(5); // Success step
       } else {
-        setServerError(response.error || "Gagal membuat pemesanan.");
+        setServerError(response.error || "Gagal mengirim pesanan booking.");
       }
     });
   };
 
-  if (isSuccess) {
+  const steps = [
+    { step: 1, label: "Paket" },
+    { step: 2, label: "Jadwal" },
+    { step: 3, label: "Pemesan" },
+    { step: 4, label: "Pembayaran" },
+    { step: 5, label: "Konfirmasi" },
+  ];
+
+  // Render Step 5 (Konfirmasi Sukses)
+  if (currentStep === 5 && createdBooking) {
+    const waText = encodeURIComponent(
+      "Halo Kak, saya sudah melakukan booking dan pembayaran DP untuk acara saya. Mohon dibantu untuk proses konfirmasi booking. Terima kasih."
+    );
+    const waUrl = `https://wa.me/6285721598190?text=${waText}`;
+
     return (
-      <div className="w-full max-w-xl mx-auto px-6 py-16 text-center border border-border/40 bg-card flex flex-col items-center">
+      <div className="w-full max-w-xl mx-auto px-6 py-12 border border-border/40 bg-card text-center flex flex-col items-center animate-[fadeIn_0.5s_ease-out]">
         <CheckCircle2 className="w-16 h-16 text-green-700 mb-6 stroke-1 animate-pulse" />
-        <h2 className="font-serif text-3xl text-primary mb-4 font-medium">Inquiry Submitted</h2>
-        <p className="font-sans text-sm text-secondary font-light mb-8 max-w-md leading-relaxed">
-          Thank you for commissioning your art with us. We have received your booking inquiry. 
-          Our studio manager will review availability and contact you within 24 hours to schedule a consultation.
+        <h2 className="font-serif text-3xl text-primary mb-3 font-medium">Pemesanan Berhasil</h2>
+        
+        <p className="font-sans text-xs text-secondary font-light mb-8 max-w-sm leading-relaxed">
+          Pemesanan Anda telah tercatat dengan status <span className="font-semibold text-yellow-600">Menunggu Persetujuan</span>. Silakan hubungi kami untuk mempercepat proses konfirmasi booking.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+
+        {/* Invoice Summary Card */}
+        <div className="w-full border border-border/40 bg-muted/20 p-6 text-left mb-8 font-sans text-xs space-y-3">
+          <div className="flex justify-between border-b border-border/20 pb-2.5">
+            <span className="text-secondary font-semibold uppercase tracking-wider text-[10px]">Detail</span>
+            <span className="text-primary font-bold">Sesi {packageType}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Nama Klien:</span>
+            <span className="text-primary font-medium">{fullName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Nama Acara:</span>
+            <span className="text-primary font-medium">{eventName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Tanggal Sesi:</span>
+            <span className="text-primary font-medium">
+              {new Date(bookingDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Waktu & Lokasi:</span>
+            <span className="text-primary font-medium text-right max-w-[200px] truncate" title={eventLocation}>
+              {eventTime} WIB - {eventLocation}
+            </span>
+          </div>
+          <div className="flex justify-between pt-2 border-t border-dashed border-border/30">
+            <span className="text-secondary">Total Biaya:</span>
+            <span className="text-primary font-medium">{"Rp. " + (createdBooking.totalAmount || 0).toLocaleString("id-ID")}</span>
+          </div>
+          <div className="flex justify-between text-sm pt-2 font-bold text-primary border-t border-border/30">
+            <span>Uang Muka (DP 50%):</span>
+            <span>{"Rp. " + (createdBooking.dpAmount || 0).toLocaleString("id-ID")}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 w-full">
           <Button 
-            onClick={() => router.push("/portfolio")}
-            variant="outline"
-            className="rounded-none font-sans text-xs uppercase tracking-widest py-5 border-primary text-primary hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer"
+            onClick={() => window.open(waUrl, "_blank")}
+            className="rounded-none font-sans text-xs uppercase tracking-widest py-6 text-white bg-primary hover:opacity-90 w-full flex items-center justify-center gap-2 cursor-pointer font-bold"
           >
-            Explore Portfolio
+            Hubungi via WhatsApp
           </Button>
-          <Button 
-            onClick={() => router.push("/")}
-            className="rounded-none font-sans text-xs uppercase tracking-widest py-5 text-white cursor-pointer"
-          >
-            Return Home
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={() => router.push("/portfolio")}
+              variant="outline"
+              className="rounded-none font-sans text-[10px] uppercase tracking-widest py-4 border-border text-primary hover:bg-neutral-100 flex-1 cursor-pointer"
+            >
+              Lihat Portofolio
+            </Button>
+            <Button 
+              onClick={() => router.push("/")}
+              variant="ghost"
+              className="rounded-none font-sans text-[10px] uppercase tracking-widest py-4 text-secondary hover:text-primary flex-1 cursor-pointer"
+            >
+              Kembali ke Beranda
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto border border-border/40 bg-card p-8 md:p-12 relative">
-      <div className="mb-10 text-center">
-        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-secondary mb-3 block font-bold">
-          Commission Form
-        </span>
-        <h2 className="font-serif text-3xl text-primary mb-3 font-medium">Book Your Session</h2>
-        <p className="font-sans text-xs text-secondary font-light max-w-sm mx-auto leading-relaxed">
-          Provide your details below, and let us frame your unique story with timeless elegance.
-        </p>
+    <div className="w-full max-w-3xl mx-auto border border-border/40 bg-card p-6 md:p-10 relative">
+      {/* Stepper Progress */}
+      <div className="mb-10 max-w-lg mx-auto">
+        <div className="flex items-center justify-between relative">
+          {steps.map((s) => {
+            const isCompleted = currentStep > s.step;
+            const isActive = currentStep === s.step;
+            return (
+              <div key={s.step} className="flex flex-col items-center flex-1 relative z-10">
+                <div
+                  className={cn(
+                    "w-7 h-7 rounded-none flex items-center justify-center text-xs font-sans font-bold border transition-all duration-300",
+                    isCompleted
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : isActive
+                      ? "bg-card border-primary text-primary ring-2 ring-primary/20"
+                      : "bg-card border-border text-secondary"
+                  )}
+                >
+                  {isCompleted ? "✓" : s.step}
+                </div>
+                <span
+                  className={cn(
+                    "text-[9px] uppercase tracking-wider font-bold mt-2 text-center hidden sm:block",
+                    isActive ? "text-primary font-bold" : "text-secondary font-light"
+                  )}
+                >
+                  {s.label}
+                </span>
+              </div>
+            );
+          })}
+          {/* Background Progress Line */}
+          <div className="absolute top-[13px] left-0 right-0 h-[1px] bg-border z-0" />
+        </div>
       </div>
 
       {serverError && (
@@ -127,137 +284,69 @@ export function BookingForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6 font-sans text-sm">
-        {/* Full Name */}
-        <div className="space-y-1.5">
-          <label htmlFor="fullName" className="text-[10px] uppercase tracking-wider text-secondary font-bold block">
-            Full Name <span className="text-red-700">*</span>
-          </label>
-          <div className="relative">
-            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary/60" />
-            <input
-              type="text"
-              id="fullName"
-              placeholder="e.g. Eleanor & James"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              disabled={isPending}
-              className="w-full pl-10 pr-4 py-3 bg-transparent border border-border/40 focus:border-primary focus:outline-none transition-colors rounded-none placeholder:text-secondary/40 text-primary"
-            />
-          </div>
-          {errors.fullName && <p className="text-xs text-red-700 font-semibold">{errors.fullName}</p>}
-        </div>
-
-        {/* Email */}
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[10px] uppercase tracking-wider text-secondary font-bold block">
-            Email Address <span className="text-red-700">*</span>
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary/60" />
-            <input
-              type="email"
-              id="email"
-              placeholder="e.g. hello@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isPending}
-              className="w-full pl-10 pr-4 py-3 bg-transparent border border-border/40 focus:border-primary focus:outline-none transition-colors rounded-none placeholder:text-secondary/40 text-primary"
-            />
-          </div>
-          {errors.email && <p className="text-xs text-red-700 font-semibold">{errors.email}</p>}
-        </div>
-
-        {/* Phone Number */}
-        <div className="space-y-1.5">
-          <label htmlFor="phoneNumber" className="text-[10px] uppercase tracking-wider text-secondary font-bold block">
-            Phone Number <span className="text-secondary/40 text-[9px] font-normal">(Optional)</span>
-          </label>
-          <div className="relative">
-            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary/60" />
-            <input
-              type="tel"
-              id="phoneNumber"
-              placeholder="e.g. +62 812-3456-7890"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              disabled={isPending}
-              className="w-full pl-10 pr-4 py-3 bg-transparent border border-border/40 focus:border-primary focus:outline-none transition-colors rounded-none placeholder:text-secondary/40 text-primary"
-            />
-          </div>
-          {errors.phoneNumber && <p className="text-xs text-red-700 font-semibold">{errors.phoneNumber}</p>}
-        </div>
-
-        {/* Package Type */}
-        <div className="space-y-1.5">
-          <label htmlFor="packageType" className="text-[10px] uppercase tracking-wider text-secondary font-bold block">
-            Package Type <span className="text-red-700">*</span>
-          </label>
-          <div className="relative">
-            <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary/60" />
-            <select
-              id="packageType"
-              value={packageType}
-              onChange={(e) => setPackageType(e.target.value)}
-              disabled={isPending}
-              className="w-full pl-10 pr-4 py-3 bg-transparent border border-border/40 focus:border-primary focus:outline-none transition-colors rounded-none text-primary appearance-none cursor-pointer"
-            >
-              <option value="" disabled className="bg-background">Select Package</option>
-              <option value="Wedding" className="bg-background text-primary">Signature Wedding</option>
-              <option value="Portraits" className="bg-background text-primary">Artistic Portrait</option>
-              <option value="Editorial" className="bg-background text-primary">Vogue Editorial / Custom</option>
-              <option value="Events" className="bg-background text-primary">Event Documentation</option>
-            </select>
-            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-primary/70 w-0 h-0" />
-          </div>
-          {errors.packageType && <p className="text-xs text-red-700 font-semibold">{errors.packageType}</p>}
-        </div>
-
-        {/* Booking Date */}
-        <div className="space-y-1.5">
-          <label htmlFor="bookingDate" className="text-[10px] uppercase tracking-wider text-secondary font-bold block">
-            Preferred Date <span className="text-red-700">*</span>
-          </label>
-          <div className="relative">
-            <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary/60" />
-            <input
-              type="date"
-              id="bookingDate"
-              value={bookingDate}
-              onChange={(e) => setBookingDate(e.target.value)}
-              disabled={isPending}
-              className="w-full pl-10 pr-4 py-3 bg-transparent border border-border/40 focus:border-primary focus:outline-none transition-colors rounded-none text-primary cursor-pointer"
-            />
-          </div>
-          {errors.bookingDate && <p className="text-xs text-red-700 font-semibold">{errors.bookingDate}</p>}
-        </div>
-
-        {/* Notes */}
-        <div className="space-y-1.5">
-          <label htmlFor="notes" className="text-[10px] uppercase tracking-wider text-secondary font-bold block">
-            Vision & Notes <span className="text-secondary/40 text-[9px] font-normal">(Optional)</span>
-          </label>
-          <textarea
-            id="notes"
-            rows={4}
-            placeholder="Tell us about your event details, location, preferred aesthetic, or custom requests..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            disabled={isPending}
-            className="w-full px-4 py-3 bg-transparent border border-border/40 focus:border-primary focus:outline-none transition-colors rounded-none placeholder:text-secondary/40 text-primary resize-none"
+      {/* Steps Content wrapper */}
+      <div className="animate-[fadeIn_0.3s_ease-out]">
+        {currentStep === 1 && (
+          <StepPilihPaket
+            initialPackages={initialPackages}
+            categories={categories}
+            selectedPackageName={packageType}
+            onSelectPackage={setPackageType}
+            onNext={handleNext}
           />
-          {errors.notes && <p className="text-xs text-red-700 font-semibold">{errors.notes}</p>}
-        </div>
+        )}
 
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          disabled={isPending}
-          className="w-full font-sans text-xs uppercase tracking-widest py-6 rounded-none font-bold text-white transition-all hover:opacity-90 cursor-pointer"
-        >
-          {isPending ? "Submitting Inquiry..." : "Submit Inquiry"}
-        </Button>
-      </form>
+        {currentStep === 2 && (
+          <StepPilihTanggal
+            bookedDates={bookedDates}
+            selectedDate={bookingDate}
+            selectedTime={eventTime}
+            onSelectDate={setBookingDate}
+            onSelectTime={setEventTime}
+            onNext={handleNext}
+            onBack={handleBack}
+          />
+        )}
+
+        {currentStep === 3 && (
+          <StepDataPemesan
+            fullName={fullName}
+            email={email}
+            phoneNumber={phoneNumber}
+            eventName={eventName}
+            eventLocation={eventLocation}
+            notes={notes}
+            onChangeFields={(fields) => {
+              if (fields.fullName !== undefined) setFullName(fields.fullName);
+              if (fields.email !== undefined) setEmail(fields.email);
+              if (fields.phoneNumber !== undefined) setPhoneNumber(fields.phoneNumber);
+              if (fields.eventName !== undefined) setEventName(fields.eventName);
+              if (fields.eventLocation !== undefined) setEventLocation(fields.eventLocation);
+              if (fields.notes !== undefined) setNotes(fields.notes);
+            }}
+            onNext={handleNext}
+            onBack={handleBack}
+          />
+        )}
+
+        {currentStep === 4 && (
+          <StepPembayaran
+            packageName={packageType}
+            packagePrice={packagePrice}
+            bookingDate={bookingDate}
+            eventTime={eventTime}
+            fullName={fullName}
+            email={email}
+            phoneNumber={phoneNumber}
+            eventName={eventName}
+            eventLocation={eventLocation}
+            notes={notes}
+            isPending={isPending}
+            onSubmit={handleSubmitBooking}
+            onBack={handleBack}
+          />
+        )}
+      </div>
     </div>
   );
 }

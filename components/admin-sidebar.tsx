@@ -9,7 +9,9 @@ import {
   Users, 
   Upload, 
   Settings, 
-  LogOut 
+  LogOut,
+  ClipboardList,
+  Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,15 +24,18 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { logoutAction } from "@/src/modules/auth/actions/login.action";
+import { SessionTimeout } from "@/components/session-timeout";
 
 export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
 
   const menuItems = [
-    { name: "Overview", href: "/admin", icon: LayoutDashboard },
-    { name: "Galleries", href: "#", icon: ImageIcon },
-    { name: "Bookings", href: "#", icon: Calendar },
-    { name: "Clients", href: "#", icon: Users },
+    { name: "Ringkasan", href: "/admin", icon: LayoutDashboard },
+    { name: "Booking", href: "/admin/bookings", icon: ClipboardList },
+    { name: "Kalender", href: "/admin/calendar", icon: Calendar },
+    { name: "Galeri", href: "/admin/galleries", icon: ImageIcon },
+    { name: "Paket", href: "/admin/packages", icon: Settings },
+    { name: "Kategori", href: "/admin/categories", icon: Tag },
   ];
 
   const handleSignOut = async (e: React.FormEvent) => {
@@ -40,6 +45,8 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
+      <SessionTimeout />
+      
       {/* Brand Header */}
       <SidebarHeader className="border-b border-border/40 py-6 px-4">
         <div className="flex items-center gap-3">
@@ -47,8 +54,8 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
             <img src="/logo.jpg" alt="SENIMAN_KAMERA" className="w-full h-full object-cover" />
           </div>
           <div>
-            <h1 className="font-serif text-base font-semibold leading-tight text-primary">Studio Admin</h1>
-            <p className="font-sans text-[9px] uppercase tracking-widest text-secondary font-bold">Manage Portfolio</p>
+            <h1 className="font-serif text-base font-semibold leading-tight text-primary">Admin Studio</h1>
+            <p className="font-sans text-[9px] uppercase tracking-widest text-secondary font-bold">Kelola Portofolio</p>
           </div>
         </div>
       </SidebarHeader>
@@ -83,7 +90,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
       <SidebarFooter className="border-t border-border/40 py-6 px-4 gap-4 mt-auto">
         <Button className="w-full font-sans text-xs uppercase tracking-widest py-6 rounded-none flex items-center justify-center gap-2">
           <Upload className="w-4 h-4" />
-          <span>Upload Photos</span>
+          <span>Unggah Foto</span>
         </Button>
 
         <SidebarMenu className="gap-1">
@@ -93,7 +100,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
               className="py-4 px-2 flex items-center gap-3 font-sans text-xs uppercase tracking-widest font-bold text-secondary hover:text-primary transition-colors w-full"
             >
               <Settings className="w-4 h-4" />
-              <span>Settings</span>
+              <span>Pengaturan</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -101,7 +108,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
               <SidebarMenuButton type="submit" className="py-4 px-2 w-full text-left">
                 <span className="flex items-center gap-3 font-sans text-xs uppercase tracking-widest font-bold text-secondary hover:text-primary transition-colors w-full">
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>Keluar</span>
                 </span>
               </SidebarMenuButton>
             </form>

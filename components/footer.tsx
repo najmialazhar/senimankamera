@@ -28,16 +28,16 @@ export function Footer() {
             Wedding Wire
           </a>
           <Link href="/terms" className="hover:text-primary transition-colors duration-300">
-            Terms of Service
+            Ketentuan Layanan
           </Link>
           <Link href="/privacy" className="hover:text-primary transition-colors duration-300">
-            Privacy Policy
+            Kebijakan Privasi
           </Link>
         </div>
 
         {/* Brand Tagline */}
         <p className="font-sans text-[10px] uppercase tracking-widest text-secondary mt-8">
-          © {new Date().getFullYear()} SENIMAN_KAMERA PHOTOSHOOT. THE ARTIST BEHIND THE LENS.
+          © {new Date().getFullYear()} SENIMAN_KAMERA PHOTOSHOOT. SANG SENIMAN DI BALIK LENSA.
         </p>
       </div>
     </footer>
