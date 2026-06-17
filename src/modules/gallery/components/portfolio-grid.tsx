@@ -1,0 +1,105 @@
+"use client";
+
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+
+interface GalleryItem {
+  id: number;
+  title: string;
+  category: string;
+  subCategory: string;
+  imageUrl: string;
+  aspect: string;
+  description?: string | null;
+}
+
+interface PortfolioGridProps {
+  initialItems: GalleryItem[];
+}
+
+export function PortfolioGrid({ initialItems }: PortfolioGridProps) {
+  const [activeFilter, setActiveFilter] = useState("All");
+
+  const categories = ["All", "Wedding", "Prewedding", "Graduation", "Portraits", "Events"];
+
+  const filteredItems = activeFilter === "All"
+    ? initialItems
+    : initialItems.filter(item => item.category === activeFilter);
+
+  return (
+    <div className="w-full max-w-[1440px] mx-auto px-6 md:px-20 py-12 md:py-20">
+      {/* Header Section */}
+      <section className="flex flex-col items-center text-center mb-16 max-w-2xl mx-auto">
+        <h1 className="font-serif text-4xl md:text-6xl text-primary mb-4 font-medium">
+          Curated Works
+        </h1>
+        <p className="font-sans text-base md:text-lg text-secondary font-light leading-relaxed">
+          A collection of moments captured through the lens, where light meets emotion in an editorial style.
+        </p>
+      </section>
+
+      {/* Filter Options */}
+      <section className="flex flex-wrap justify-center gap-4 md:gap-8 mb-16 border-b border-border/40 pb-6 font-sans text-xs uppercase tracking-widest font-bold">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveFilter(cat)}
+            className={cn(
+              "pb-1 transition-all duration-300 cursor-pointer",
+              activeFilter === cat
+                ? "text-primary border-b border-primary"
+                : "text-secondary hover:text-primary"
+            )}
+          >
+            {cat}
+          </button>
+        ))}
+      </section>
+
+      {/* Masonry-Style Grid using CSS Columns */}
+      <section className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
+        {filteredItems.map((item) => (
+          <div
+            key={item.id}
+            className="break-inside-avoid group cursor-pointer flex flex-col mb-8"
+          >
+            <div
+              className={cn(
+                "w-full overflow-hidden bg-muted relative border border-border/30 mb-4",
+                item.aspect === "portrait" && "aspect-[3/4]",
+                item.aspect === "square" && "aspect-square",
+                item.aspect === "wide" && "aspect-[16/9]"
+              )}
+            >
+              <img
+                src={item.imageUrl}
+                alt={item.title}
+                className="w-full h-full object-cover transition-transform duration-[0.8s] group-hover:scale-105"
+              />
+            </div>
+            <div>
+              <span className="font-sans text-[10px] uppercase tracking-widest text-secondary block mb-1 font-bold">
+                {item.subCategory}
+              </span>
+              <h3 className="font-serif text-xl md:text-2xl text-primary font-medium">
+                {item.title}
+              </h3>
+              {item.description && (
+                <p className="font-sans text-xs text-secondary mt-2 font-light leading-relaxed">
+                  {item.description}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Load More Action */}
+      <div className="flex justify-center mt-16">
+        <button className="border border-primary text-primary bg-transparent font-sans text-xs uppercase tracking-widest px-8 py-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors font-bold rounded-none cursor-pointer">
+          Load More Works
+        </button>
+      </div>
+    </div>
+  );
+}

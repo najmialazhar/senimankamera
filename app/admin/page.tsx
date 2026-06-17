@@ -19,6 +19,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
+import { BookingRepository } from "@/src/modules/booking/repositories/booking.repository";
+import { GetRecentBookingsUseCase } from "@/src/modules/booking/use-cases/get-recent-bookings.use-case";
+
+export const revalidate = 0; // Ensure admin dashboard gets fresh database queries
 
 export default async function AdminPage() {
   const cookieStore = await cookies();
@@ -29,24 +33,28 @@ export default async function AdminPage() {
     redirect("/login");
   }
 
-  const bookingRequests = [
-    {
-      id: 1,
-      client: "Emma & James",
-      initialLetter: "E",
-      date: "Oct 15, 2024",
-      type: "Wedding",
-      status: "Pending",
-    },
-    {
-      id: 2,
-      client: "Marcus Cole",
-      initialLetter: "M",
-      date: "Sep 28, 2024",
-      type: "Editorial",
-      status: "Confirmed",
-    }
-  ];
+  const repository = new BookingRepository();
+  const getRecentBookingsUseCase = new GetRecentBookingsUseCase(repository);
+  const dbBookings = await getRecentBookingsUseCase.execute(10);
+
+  const bookingRequests = dbBookings.map((req) => {
+    const clientName = req.client.fullName;
+    const initialLetter = clientName.charAt(0).toUpperCase() || "?";
+    const dateFormatted = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(req.bookingDate);
+
+    return {
+      id: req.id,
+      client: clientName,
+      initialLetter,
+      date: dateFormatted,
+      type: req.packageType,
+      status: req.status,
+    };
+  });
 
   return (
     <SidebarProvider>

@@ -1,6 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Check, Clock, Users, BookOpen, Image as ImageIcon, MapPin } from "lucide-react";
+import Link from "next/link";
 
 export default function ServicesPage() {
   const faqs = [
@@ -79,7 +80,11 @@ export default function ServicesPage() {
               </li>
             </ul>
 
-            <Button className="w-full md:w-auto font-sans text-xs uppercase tracking-widest px-8 py-6 rounded-none">
+            <Button
+              render={<Link href="/book?package=wedding" />}
+              nativeButton={false}
+              className="w-full md:w-auto font-sans text-xs uppercase tracking-widest px-8 py-6 rounded-none cursor-pointer"
+            >
               Inquire for Availability
             </Button>
           </div>
@@ -112,7 +117,12 @@ export default function ServicesPage() {
                   <span>Creative direction and styling consultation</span>
                 </li>
               </ul>
-              <Button variant="outline" className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none border-primary text-primary hover:bg-primary hover:text-on-primary">
+              <Button
+                render={<Link href="/book?package=portrait" />}
+                nativeButton={false}
+                variant="outline"
+                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none border-primary text-primary hover:bg-primary hover:text-on-primary cursor-pointer"
+              >
                 Book Session
               </Button>
             </div>
@@ -142,7 +152,12 @@ export default function ServicesPage() {
                   <span>Full commercial usage rights included</span>
                 </li>
               </ul>
-              <Button variant="outline" className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none border-primary text-primary hover:bg-primary hover:text-on-primary">
+              <Button
+                render={<Link href="/book?package=events" />}
+                nativeButton={false}
+                variant="outline"
+                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none border-primary text-primary hover:bg-primary hover:text-on-primary cursor-pointer"
+              >
                 Request Quote
               </Button>
             </div>
