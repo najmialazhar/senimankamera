@@ -1,0 +1,42 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Gallery {
+  id          Int      @id @default(autoincrement())
+  title       String
+  category    String
+  subCategory String
+  imageUrl    String
+  aspect      String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Client {
+  id          String    @id @default(uuid())
+  fullName    String
+  email       String    @unique
+  phoneNumber String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+}
+
+model Booking {
+  id          String    @id @default(uuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  packageType String
+  bookingDate DateTime
+  eventDate   DateTime?
+  notes       String?
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
