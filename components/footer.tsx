@@ -10,7 +10,7 @@ export function Footer() {
         </Link>
 
         {/* Owner Profile Placeholder */}
-        <div className="flex items-center gap-4 border border-border/30 bg-muted/10 px-5 py-3 rounded-none max-w-[280px] mx-auto text-left">
+        <div className="flex items-center gap-4 border border-border/30 bg-muted/10 px-5 py-3 rounded-none w-fit max-w-[90vw] mx-auto text-left">
           <div className="w-12 h-12 rounded-full overflow-hidden bg-neutral-200 border border-border flex-shrink-0">
             <img
               src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200"
@@ -20,7 +20,7 @@ export function Footer() {
           </div>
           <div className="font-sans text-xs">
             <span className="text-secondary/50 uppercase tracking-widest text-[9px] font-bold block mb-0.5">Owner</span>
-            <span className="text-primary font-serif text-base font-medium">Zaki Irsyad Abdurohman</span>
+            <span className="text-primary font-serif text-sm sm:text-base font-medium whitespace-nowrap">Zaki Irsyad Abdurohman</span>
           </div>
         </div>
 
