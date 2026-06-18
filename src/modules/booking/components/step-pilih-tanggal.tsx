@@ -29,6 +29,14 @@ interface StepPilihTanggalProps {
   categoryName?: string;
 }
 
+// Helper to format date key YYYY-MM-DD
+const formatDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 export function StepPilihTanggal({
   bookedDates,
   selectedDate,
@@ -187,13 +195,7 @@ export function StepPilihTanggal({
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
-  // Helper to format date key YYYY-MM-DD
-  const formatDateKey = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
+
 
   const isDateOnlyConflict = bookingType === "DATE_ONLY" && bookedSlots.length > 0;
 
