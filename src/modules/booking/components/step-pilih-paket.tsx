@@ -47,6 +47,16 @@ export function StepPilihPaket({
     currentSelectedPkg ? currentSelectedPkg.categoryId : null
   );
 
+  // Sync selectedCategory state when selectedPackageName prop updates (e.g. pre-filled from query param after mount)
+  useEffect(() => {
+    if (selectedPackageName) {
+      const pkg = initialPackages.find(p => p.name === selectedPackageName);
+      if (pkg && pkg.categoryId !== selectedCategory) {
+        setSelectedCategory(pkg.categoryId);
+      }
+    }
+  }, [selectedPackageName, initialPackages, selectedCategory]);
+
   const activePackages = selectedCategory
     ? initialPackages.filter((pkg) => pkg.categoryId === selectedCategory)
     : [];
