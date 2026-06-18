@@ -57,6 +57,7 @@ export class TelegramService {
 💰 <b>Uang Muka (DP):</b> ${formattedDP} <b>(TELAH DI BAYAR)</b> dari Total: ${formattedTotal}
 📝 <b>Catatan Vision:</b> ${booking.notes || "-"}
 ----------------------------------
+Silahkan cek di Admin Dashboard di senimankamera.vercel.app/login
 `;
 
     const url = `https://api.telegram.org/bot${this.token}/sendMessage`;
@@ -124,7 +125,7 @@ ${emoji} <b>STATUS BOOKING DIPERBARUI</b> ${emoji}
 📅 <b>Tanggal Acara:</b> ${formattedDate}
 📌 <b>Status Baru:</b> <b>${statusText}</b>
 ----------------------------------
-<i>Status telah diperbarui di Admin Dashboard.</i>
+Silahkan cek di Admin Dashboard di senimankamera.vercel.app/login
 `;
 
     const url = `https://api.telegram.org/bot${this.token}/sendMessage`;
