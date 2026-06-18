@@ -6,13 +6,12 @@ import {
   LayoutDashboard,
   Image as ImageIcon,
   Calendar,
-  Users,
-  Upload,
   Settings,
   LogOut,
   ClipboardList,
   Tag,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +37,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
     { name: "Galeri", href: "/admin/galleries", icon: ImageIcon },
     { name: "Paket", href: "/admin/packages", icon: Settings },
     { name: "Kategori", href: "/admin/categories", icon: Tag },
+    { name: "Pengaturan S&K", href: "/admin/settings", icon: FileText },
   ];
 
   const handleSignOut = async (e: React.FormEvent) => {

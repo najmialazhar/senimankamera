@@ -21,6 +21,44 @@ export class CreateBookingUseCase {
 
     const bookingDate = new Date(parsed.bookingDate);
 
+    // Get current date and time in Asia/Jakarta timezone
+    const getJakartaTime = () => {
+      const d = new Date();
+      const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jakarta",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      });
+      const parts = formatter.formatToParts(d);
+      const year = parts.find(p => p.type === 'year')?.value || '';
+      const month = parts.find(p => p.type === 'month')?.value || '';
+      const day = parts.find(p => p.type === 'day')?.value || '';
+      const hour = parts.find(p => p.type === 'hour')?.value || '00';
+      const minute = parts.find(p => p.type === 'minute')?.value || '00';
+      return {
+        dateStr: `${year}-${month}-${day}`, // YYYY-MM-DD
+        hours: parseInt(hour, 10),
+        minutes: parseInt(minute, 10)
+      };
+    };
+
+    const jkTime = getJakartaTime();
+    if (parsed.bookingDate === jkTime.dateStr) {
+      const timeToCheck = parsed.sessionStartTime || parsed.eventTime;
+      if (timeToCheck) {
+        const [h, m] = timeToCheck.split(":").map(Number);
+        const selectedMinutes = h * 60 + m;
+        const currentMinutes = jkTime.hours * 60 + jkTime.minutes;
+        if (selectedMinutes <= currentMinutes) {
+          throw new Error("Waktu yang dipilih sudah terlewat hari ini. Silakan pilih waktu yang akan datang.");
+        }
+      }
+    }
+
     // Get package price details
     const packageRepo = new PackageRepository();
     const targetPackage = await packageRepo.findByNameOrCategory(parsed.packageType);

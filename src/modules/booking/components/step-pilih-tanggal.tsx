@@ -107,6 +107,19 @@ export function StepPilihTanggal({
     return `${h}:${m}`;
   };
 
+  // Check if selected time has already passed for today
+  const isTimeInPast = useMemo(() => {
+    if (!selectedDate || !selectedTime) return false;
+    const todayStr = formatDateKey(new Date());
+    if (selectedDate !== todayStr) return false;
+
+    const now = new Date();
+    const [selHour, selMin] = selectedTime.split(":").map(Number);
+    const selectedMinutes = selHour * 60 + selMin;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return selectedMinutes <= nowMinutes;
+  }, [selectedDate, selectedTime]);
+
   // Real-time time slot overlap validation on client side
   const isTimeSlotOverlapping = useMemo(() => {
     if (!selectedTime || !sessionDuration || bookedSlots.length === 0) return false;
@@ -448,6 +461,14 @@ export function StepPilihTanggal({
                     </div>
                   </div>
 
+                  {/* Past time warning for today */}
+                  {selectedTime && isTimeInPast && (
+                    <div className="mt-3 p-2.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-800 dark:text-red-400 font-sans text-[11px] font-bold flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 flex-shrink-0 text-red-600" />
+                      <span>Waktu ini sudah terlewat hari ini. Silakan pilih waktu yang akan datang.</span>
+                    </div>
+                  )}
+
                   {/* Duration Display & Overlap Warning */}
                   {selectedTime && bookingType === "TIME_BASED" && sessionDuration && (
                     <div className="space-y-2.5 mt-3">
@@ -545,7 +566,7 @@ export function StepPilihTanggal({
         >
           ← Kembali
         </Button>
-        {selectedDate && selectedTime && !isTimeSlotOverlapping && !isDayBlocked && !isDateOnlyConflict && (
+        {selectedDate && selectedTime && !isTimeSlotOverlapping && !isDayBlocked && !isDateOnlyConflict && !isTimeInPast && (
           <Button
             type="button"
             onClick={onNext}

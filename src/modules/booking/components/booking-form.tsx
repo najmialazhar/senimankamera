@@ -6,7 +6,7 @@ import { createBookingAction } from "../actions/create-booking.action";
 import { getBookedDatesWithInfoAction } from "../actions/get-booked-dates-with-info.action";
 import { cancelPendingBookingAction } from "../actions/cancel-pending-booking.action";
 import { CreateBookingSchema } from "../schemas/create-booking.schema";
-import { AlertCircle, CheckCircle2, Check } from "lucide-react";
+import { AlertCircle, CheckCircle2, Check, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +79,12 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
   } | null>(null);
   const [activeSnapToken, setActiveSnapToken] = useState("");
   const [activeSnapUrl, setActiveSnapUrl] = useState("");
+
+  // Terms & Conditions States
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [termsContent, setTermsContent] = useState("");
+  const [isLoadingTerms, setIsLoadingTerms] = useState(false);
 
   // Helper to calculate end time based on session duration
   const calculateEndTime = (startTime: string, durationMinutes: number) => {
@@ -179,6 +185,36 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
         setServerError(response.error || "Gagal membatalkan pembayaran sebelumnya. Silakan coba kembali.");
       }
     });
+  };
+
+  const handleOpenTermsModal = async () => {
+    if (activeSnapToken) {
+      handleSubmitBooking();
+      return;
+    }
+
+    setIsLoadingTerms(true);
+    setServerError(null);
+    try {
+      const { getTermsContentAction } = await import("../actions/get-terms-content.action");
+      const res = await getTermsContentAction(selectedCategoryBookingType);
+      if (res.success && res.data) {
+        setTermsContent(res.data);
+        setIsTermsModalOpen(true);
+      } else {
+        setServerError(res.error || "Gagal memuat Syarat & Ketentuan.");
+      }
+    } catch (err) {
+      console.error(err);
+      setServerError("Gagal memuat Syarat & Ketentuan.");
+    } finally {
+      setIsLoadingTerms(false);
+    }
+  };
+
+  const handleConfirmTerms = () => {
+    setIsTermsModalOpen(false);
+    handleSubmitBooking();
   };
 
   const handleSubmitBooking = async () => {
@@ -496,15 +532,76 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
             eventName={eventName}
             eventLocation={eventLocation}
             notes={notes}
-            isPending={isPending}
+            isPending={isPending || isLoadingTerms}
             bookingType={selectedCategoryBookingType}
-            onSubmit={handleSubmitBooking}
+            onSubmit={handleOpenTermsModal}
             onBack={handleBack}
             isPayRetry={!!activeSnapToken}
             onCancelPayment={handleCancelPayment}
           />
         )}
       </div>
+
+      {/* Terms & Conditions Modal Overlay */}
+      {isTermsModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-card border border-border/40 w-full max-w-lg p-6 md:p-8 space-y-6 rounded-none relative shadow-2xl max-h-[90vh] flex flex-col font-sans text-xs">
+            <h3 className="font-serif text-lg text-primary font-semibold border-b border-border/20 pb-3 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary animate-pulse" />
+              Syarat & Ketentuan Pemesanan
+            </h3>
+
+            {/* Scrollable Terms Content */}
+            <div className="flex-1 overflow-y-auto pr-2 min-h-[150px] max-h-[350px] border border-border/20 bg-muted/10 p-4 font-sans text-xs text-secondary whitespace-pre-wrap leading-relaxed rounded-none select-none">
+              {termsContent}
+            </div>
+
+            {/* Agreement Checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer select-none py-1">
+              <input
+                type="checkbox"
+                checked={hasAcceptedTerms}
+                onChange={(e) => setHasAcceptedTerms(e.target.checked)}
+                className="mt-0.5 h-4.5 w-4.5 rounded-none border-border accent-primary cursor-pointer"
+              />
+              <span className="text-secondary leading-normal">
+                Saya telah membaca, memahami, dan menyetujui seluruh Syarat & Ketentuan yang berlaku untuk sesi pemesanan ini.
+              </span>
+            </label>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border/20">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsTermsModalOpen(false);
+                  setHasAcceptedTerms(false);
+                }}
+                disabled={isPending}
+                className="font-sans text-xs uppercase tracking-widest py-4 px-6 rounded-none border-border flex-1 order-2 sm:order-1"
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmTerms}
+                disabled={!hasAcceptedTerms || isPending}
+                className="font-sans text-xs uppercase tracking-widest py-4 px-8 rounded-none font-bold text-white bg-primary hover:opacity-90 flex-1 order-1 sm:order-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  "Lanjut ke Pembayaran"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
