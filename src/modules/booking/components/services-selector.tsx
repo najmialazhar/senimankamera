@@ -42,7 +42,7 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
   return (
     <div className="w-full space-y-16">
       {/* Category Grid Selection */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat.id;
           return (
@@ -50,7 +50,7 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
               className={cn(
-                "p-6 text-left border transition-all duration-300 group cursor-pointer flex flex-col justify-between h-[180px] rounded-none",
+                "p-3.5 sm:p-6 text-left border transition-all duration-300 group cursor-pointer flex flex-col justify-between h-[145px] sm:h-[180px] rounded-none",
                 isSelected
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border/40 bg-card hover:border-primary/60 text-foreground"
@@ -59,13 +59,13 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
               <div className="w-full">
                 <div className="flex justify-between items-start w-full mb-3">
                   <span className={cn(
-                    "font-sans text-[10px] uppercase tracking-widest font-bold block",
+                    "font-sans text-[8px] sm:text-[10px] uppercase tracking-widest font-bold block",
                     isSelected ? "text-primary-foreground/75" : "text-secondary"
                   )}>
                     Kategori
                   </span>
                   <span className={cn(
-                    "font-sans text-[8px] uppercase tracking-wider px-1.5 py-0.5 font-bold border rounded-none scale-90 origin-right leading-none",
+                    "font-sans text-[7px] sm:text-[8px] uppercase tracking-wider px-1.5 py-0.5 font-bold border rounded-none scale-90 origin-right leading-none",
                     isSelected
                       ? "border-primary-foreground/20 text-primary-foreground bg-primary-foreground/10"
                       : cat.bookingType === "TIME_BASED"
@@ -75,12 +75,12 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
                     {cat.bookingType === "TIME_BASED" ? "Multi-Session" : "Full-Day"}
                   </span>
                 </div>
-                <h3 className="font-serif text-lg md:text-xl font-medium leading-tight mb-2">
+                <h3 className="font-serif text-sm sm:text-lg md:text-xl font-medium leading-tight mb-2">
                   {cat.label}
                 </h3>
                 {cat.description && (
                   <p className={cn(
-                    "font-sans text-xs font-light leading-relaxed line-clamp-3",
+                    "font-sans text-[10px] sm:text-xs font-light leading-relaxed line-clamp-2 sm:line-clamp-3",
                     isSelected ? "text-primary-foreground/90" : "text-secondary"
                   )}>
                     {cat.description}
@@ -90,7 +90,7 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
               
               <div className="flex justify-end w-full">
                 <span className={cn(
-                  "font-sans text-[10px] uppercase tracking-wider font-bold transition-all duration-300 group-hover:translate-x-1",
+                  "font-sans text-[8px] sm:text-[10px] uppercase tracking-wider font-bold transition-all duration-300 group-hover:translate-x-1",
                   isSelected ? "text-primary-foreground" : "text-primary"
                 )}>
                   {isSelected ? "Terpilih" : "Pilih Acara →"}

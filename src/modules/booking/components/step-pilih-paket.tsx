@@ -85,7 +85,7 @@ export function StepPilihPaket({
       </div>
 
       {/* Categories Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat.id;
           return (
@@ -94,18 +94,18 @@ export function StepPilihPaket({
               type="button"
               onClick={() => setSelectedCategory(cat.id)}
               className={cn(
-                "p-5 text-left border transition-all duration-300 group cursor-pointer flex flex-col justify-between h-[150px] rounded-none",
+                "p-3.5 sm:p-5 text-left border transition-all duration-300 group cursor-pointer flex flex-col justify-between h-[135px] sm:h-[150px] rounded-none",
                 isSelected
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border/40 bg-card hover:border-primary/60 text-foreground"
               )}
             >
               <div>
-                <h3 className="font-serif text-base font-medium leading-tight mb-2 flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-serif text-xs sm:text-base font-medium leading-tight mb-2 flex items-center gap-1 sm:gap-1.5 flex-wrap">
                   {cat.label}
                   {cat.bookingType === "TIME_BASED" && (
                     <span className={cn(
-                      "font-sans text-[8px] uppercase tracking-wider px-1.5 py-0.5 font-bold border",
+                      "font-sans text-[7px] sm:text-[8px] uppercase tracking-wider px-1 sm:px-1.5 py-0.5 font-bold border",
                       isSelected 
                         ? "bg-primary-foreground text-primary border-primary-foreground" 
                         : "bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-900/30"
@@ -116,7 +116,7 @@ export function StepPilihPaket({
                 </h3>
                 {cat.description && (
                   <p className={cn(
-                    "font-sans text-[11px] font-light leading-relaxed line-clamp-3",
+                    "font-sans text-[10px] sm:text-[11px] font-light leading-relaxed line-clamp-2 sm:line-clamp-3",
                     isSelected ? "text-primary-foreground/90" : "text-secondary"
                   )}>
                     {cat.description}
@@ -126,7 +126,7 @@ export function StepPilihPaket({
               
               <div className="flex justify-end w-full">
                 <span className={cn(
-                  "font-sans text-[9px] uppercase tracking-wider font-bold transition-all duration-300 group-hover:translate-x-1",
+                  "font-sans text-[8px] sm:text-[9px] uppercase tracking-wider font-bold transition-all duration-300 group-hover:translate-x-1",
                   isSelected ? "text-primary-foreground" : "text-primary"
                 )}>
                   {isSelected ? "Terpilih ✓" : "Pilih Kategori →"}

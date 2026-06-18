@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface GalleryItem {
@@ -17,11 +18,13 @@ interface GalleryItem {
 export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visibleItems, setVisibleItems] = useState(1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isProgrammaticScrollRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const itemsCount = items.length;
 
-  // Detect screen size to determine visible items count
+  // Detect screen size to determine visible items count (used for dots/arrows maxIndex calculation)
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -47,25 +50,46 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
     }
   }, [maxIndex, currentIndex]);
 
+  const scrollToIndex = (index: number) => {
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const firstChild = container.firstElementChild as HTMLElement;
+    if (!firstChild) return;
+
+    // Item width including gap of 32px (gap-8 is 32px)
+    const itemWidth = firstChild.getBoundingClientRect().width + 32;
+    
+    isProgrammaticScrollRef.current = true;
+    container.scrollTo({
+      left: index * itemWidth,
+      behavior: "smooth",
+    });
+
+    // Reset the programmatic scroll flag after transition is complete
+    const timeoutId = setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  };
+
   const nextSlide = () => {
     setCurrentIndex((prev) => {
-      if (prev >= maxIndex) {
-        return 0; // go back to start
-      }
-      return prev + 1;
+      const next = prev >= maxIndex ? 0 : prev + 1;
+      scrollToIndex(next);
+      return next;
     });
   };
 
   const prevSlide = () => {
     setCurrentIndex((prev) => {
-      if (prev <= 0) {
-        return maxIndex; // go to end
-      }
-      return prev - 1;
+      const next = prev <= 0 ? maxIndex : prev - 1;
+      scrollToIndex(next);
+      return next;
     });
   };
 
-  // Auto slide every 5 seconds (right to left)
+  // Auto slide every 5 seconds
   useEffect(() => {
     if (itemsCount === 0 || maxIndex === 0) return;
     
@@ -75,10 +99,30 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
     };
   }, [itemsCount, maxIndex]);
 
-  const handleInteraction = () => {
+  const resetTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (itemsCount > 0 && maxIndex > 0) {
       timerRef.current = setInterval(nextSlide, 5000);
+    }
+  };
+
+  const handleScroll = () => {
+    // Skip scroll detection if programmatically scrolling to avoid jumpiness/feedback loop
+    if (isProgrammaticScrollRef.current) return;
+    
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const firstChild = container.firstElementChild as HTMLElement;
+    if (!firstChild) return;
+
+    const scrollLeft = container.scrollLeft;
+    const itemWidth = firstChild.getBoundingClientRect().width + 32; // item width + gap-8
+
+    const index = Math.round(scrollLeft / itemWidth);
+    const clampedIndex = Math.min(Math.max(0, index), maxIndex);
+
+    if (clampedIndex !== currentIndex) {
+      setCurrentIndex(clampedIndex);
     }
   };
 
@@ -97,46 +141,42 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
   return (
     <div className="relative w-full overflow-hidden">
       {/* Slides Container */}
-      <div className="relative overflow-hidden w-full">
-        <div
-          className="flex gap-8"
-          style={{
-            transform: `translateX(-${currentIndex * (100 / visibleItems)}%)`,
-            transition: "transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)",
-            width: `${(itemsCount / visibleItems) * 100}%`,
-          }}
-        >
-          {items.map((item, index) => {
-            const isOddIndex = index % 2 === 1;
-            const categoryLabel = categoryTranslations[item.category] || item.category;
+      <div 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        onTouchStart={resetTimer}
+        onMouseDown={resetTimer}
+        className="flex gap-8 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 md:px-20 py-4 pb-8 -mx-6 md:-mx-20 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {items.map((item, index) => {
+          const isOddIndex = index % 2 === 1;
+          const categoryLabel = categoryTranslations[item.category] || item.category;
 
-            return (
-              <div
-                key={item.id}
-                onClick={handleInteraction}
-                className={`flex-shrink-0 group cursor-pointer select-none px-4 ${
-                  visibleItems === 3 ? "w-[30%]" : visibleItems === 2 ? "w-[45%]" : "w-[85%]"
-                } ${visibleItems === 3 && isOddIndex ? "mt-12" : ""}`}
-                style={{
-                  width: `calc(${100 / itemsCount}% - ${((visibleItems - 1) * 32) / itemsCount}px)`
-                }}
-              >
-                <div className="aspect-[4/5] overflow-hidden bg-muted mb-6 relative border border-border/20">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-[1.8s] ease-out group-hover:scale-105"
-                    draggable={false}
-                  />
-                </div>
-                <span className="font-sans text-[10px] uppercase tracking-widest text-secondary block mb-2 font-bold">
-                  {categoryLabel} • {item.subCategory}
-                </span>
-                <h3 className="font-serif text-2xl text-primary font-medium">{item.title}</h3>
+          return (
+            <div
+              key={item.id}
+              onClick={resetTimer}
+              className={cn(
+                "flex-shrink-0 group cursor-pointer select-none px-4 snap-start transition-transform duration-300",
+                "w-[82vw] sm:w-[calc(50%-16px)] lg:w-[calc(33.333%-22px)]",
+                isOddIndex && "lg:mt-12"
+              )}
+            >
+              <div className="aspect-[4/5] overflow-hidden bg-muted mb-6 relative border border-border/20">
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="w-full h-full object-cover transition-transform duration-[1.8s] ease-out group-hover:scale-105"
+                  draggable={false}
+                />
               </div>
-            );
-          })}
-        </div>
+              <span className="font-sans text-[10px] uppercase tracking-widest text-secondary block mb-2 font-bold">
+                {categoryLabel} • {item.subCategory}
+              </span>
+              <h3 className="font-serif text-2xl text-primary font-medium">{item.title}</h3>
+            </div>
+          );
+        })}
       </div>
 
       {/* Navigation Controls (Dots & Arrows) */}
@@ -149,7 +189,8 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
                 key={idx}
                 onClick={() => {
                   setCurrentIndex(idx);
-                  handleInteraction();
+                  scrollToIndex(idx);
+                  resetTimer();
                 }}
                 className={`h-1.5 transition-all duration-500 rounded-full bg-primary ${
                   currentIndex === idx ? "w-8 opacity-100" : "w-2 opacity-30"
@@ -166,7 +207,7 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
               size="icon"
               onClick={() => {
                 prevSlide();
-                handleInteraction();
+                resetTimer();
               }}
               className="h-9 w-9 rounded-none border-border"
             >
@@ -177,7 +218,7 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
               size="icon"
               onClick={() => {
                 nextSlide();
-                handleInteraction();
+                resetTimer();
               }}
               className="h-9 w-9 rounded-none border-border"
             >

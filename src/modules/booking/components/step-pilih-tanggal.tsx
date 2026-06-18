@@ -209,7 +209,7 @@ export function StepPilihTanggal({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Custom Calendar Card */}
-        <div className="border border-border/40 bg-card p-5 lg:col-span-7 rounded-none">
+        <div className="border border-border/40 bg-card p-3 sm:p-5 lg:col-span-7 rounded-none">
           {/* Header calendar */}
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-serif text-base text-primary font-medium capitalize">

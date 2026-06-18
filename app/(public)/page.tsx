@@ -76,7 +76,7 @@ export default async function HomePage() {
             <span className="font-sans text-xs uppercase tracking-[0.2em] mb-4 block font-bold">
               Sang Seniman di Balik Lensa
             </span>
-            <h1 className="font-serif text-5xl md:text-7xl mb-6 leading-tight font-medium">
+            <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl mb-6 leading-tight font-medium">
               Mengabadikan keanggunan yang mendalam.
             </h1>
             <p className="font-sans text-base md:text-lg mb-10 max-w-xl font-light opacity-90 leading-relaxed">
@@ -124,7 +124,7 @@ export default async function HomePage() {
 
       {/* Portfolio Categories Section */}
       <section className="py-24 md:py-32 bg-muted/50 overflow-hidden">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-20 mb-12 flex justify-between items-end">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-20 mb-12 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
             <span className="font-sans text-[10px] uppercase tracking-widest text-secondary block mb-3 font-bold">
               Karya Seni Kami
