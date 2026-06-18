@@ -20,7 +20,7 @@ export function Footer() {
           </div>
           <div className="font-sans text-xs">
             <span className="text-secondary/50 uppercase tracking-widest text-[9px] font-bold block mb-0.5">Owner</span>
-            <span className="text-primary font-serif text-base font-medium">Nama Owner</span>
+            <span className="text-primary font-serif text-base font-medium">Zaki Irsyad Abdurohman</span>
           </div>
         </div>
 
