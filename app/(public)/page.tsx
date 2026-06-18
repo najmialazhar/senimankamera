@@ -36,16 +36,23 @@ const fallbackCollections = [
   }
 ];
 
+export const revalidate = 0;
+
 export default async function HomePage() {
-  const latestGalleries = await prisma.gallery.findMany({
-    where: {
-      mediaType: "image",
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: 6,
-  });
+  let latestGalleries = [];
+  try {
+    latestGalleries = await prisma.gallery.findMany({
+      where: {
+        mediaType: "image",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 6,
+    });
+  } catch (error) {
+    console.error("Prisma error during home page generation:", error);
+  }
 
   const displayItems = latestGalleries.length > 0 ? latestGalleries : fallbackCollections;
 
