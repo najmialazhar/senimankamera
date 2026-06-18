@@ -13,15 +13,22 @@ interface GalleryItem {
   description?: string | null;
 }
 
-interface PortfolioGridProps {
-  initialItems: GalleryItem[];
+interface CategoryItem {
+  id: string;
+  name: string;
+  label: string;
 }
 
-export function PortfolioGrid({ initialItems }: PortfolioGridProps) {
+interface PortfolioGridProps {
+  initialItems: GalleryItem[];
+  categories?: CategoryItem[];
+}
+
+export function PortfolioGrid({ initialItems, categories: dbCategories }: PortfolioGridProps) {
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const categories = ["All", "Wedding", "Prewedding", "Graduation", "Portraits", "Events"];
-  const categoryLabels: Record<string, string> = {
+  const fallbackCategories = ["All", "Wedding", "Prewedding", "Graduation", "Portraits", "Events"];
+  const fallbackLabels: Record<string, string> = {
     All: "Semua",
     Wedding: "Pernikahan",
     Prewedding: "Pranikah",
@@ -29,6 +36,20 @@ export function PortfolioGrid({ initialItems }: PortfolioGridProps) {
     Portraits: "Potret",
     Events: "Acara",
   };
+
+  const categories = dbCategories && dbCategories.length > 0
+    ? ["All", ...dbCategories.map(c => c.name)]
+    : fallbackCategories;
+
+  const categoryLabels: Record<string, string> = dbCategories && dbCategories.length > 0
+    ? dbCategories.reduce<Record<string, string>>(
+        (acc, curr) => {
+          acc[curr.name] = curr.label;
+          return acc;
+        },
+        { All: "Semua" }
+      )
+    : fallbackLabels;
 
   const filteredItems = activeFilter === "All"
     ? initialItems
