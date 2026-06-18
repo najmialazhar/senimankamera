@@ -32,10 +32,10 @@ export class TelegramService {
       dateStyle: "full",
     }).format(booking.bookingDate);
 
-    const formattedDP = booking.dpAmount 
+    const formattedDP = booking.dpAmount
       ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(booking.dpAmount)
       : "-";
-    const formattedTotal = booking.totalAmount 
+    const formattedTotal = booking.totalAmount
       ? new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(booking.totalAmount)
       : "-";
 
@@ -57,7 +57,7 @@ export class TelegramService {
 💰 <b>Uang Muka (DP):</b> ${formattedDP} <b>(TELAH DI BAYAR)</b> dari Total: ${formattedTotal}
 📝 <b>Catatan Vision:</b> ${booking.notes || "-"}
 ----------------------------------
-Silahkan cek di Admin Dashboard di senimankamera.vercel.app/login
+Silahkan cek Admin Dashboard di senimankamera.vercel.app/login
 `;
 
     const url = `https://api.telegram.org/bot${this.token}/sendMessage`;
