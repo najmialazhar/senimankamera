@@ -85,18 +85,28 @@ export function Header() {
           {/* CTA Button */}
           <div className="hidden md:block">
             <Link
-              href="/#contact"
+              href="/services"
               className={cn(
                 buttonVariants({ variant: "default" }),
                 "font-sans text-xs uppercase tracking-[0.15em] px-8 py-6 rounded-none"
               )}
             >
-              Pesan Sesi
+              Booking Sekarang
             </Link>
           </div>
 
-          {/* Mobile Spacer to balance layout */}
-          <div className="md:hidden w-6"></div>
+          {/* Mobile CTA Button */}
+          <div className="md:hidden">
+            <Link
+              href="/services"
+              className={cn(
+                buttonVariants({ variant: "default", size: "sm" }),
+                "font-sans text-[9px] uppercase tracking-wider px-2.5 py-2 rounded-none font-bold whitespace-nowrap leading-none"
+              )}
+            >
+              Booking Sekarang
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -133,14 +143,14 @@ export function Header() {
           </div>
           <div className="mt-auto">
             <Link
-              href="/#contact"
+              href="/services"
               onClick={() => setIsMobileMenuOpen(false)}
               className={cn(
                 buttonVariants({ variant: "default" }),
                 "w-full font-sans text-xs uppercase tracking-[0.15em] py-6 rounded-none text-center"
               )}
             >
-              Pesan Sesi
+              Booking Sekarang
             </Link>
           </div>
         </div>

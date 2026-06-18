@@ -123,7 +123,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     };
   }, []);
 
-  // Pre-fill packageType from query param
+  // Pre-fill packageType from query param and auto advance to step 2
   useEffect(() => {
     const pkg = searchParams.get("package");
     if (pkg) {
@@ -132,9 +132,24 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
       );
       if (matched) {
         setPackageType(matched.name);
+        
+        // Set category properties so step 2 calendar loads correctly
+        const cat = categories.find((c) => c.id === matched.categoryId);
+        if (cat) {
+          setSelectedCategoryBookingType(cat.bookingType || "DATE_ONLY");
+          setSelectedSessionDuration(matched.sessionDuration || null);
+          
+          if (cat.bookingType === "TIME_BASED") {
+            setEventName((prev) => (prev === "" ? "Foto Studio Session" : prev));
+            setEventLocation((prev) => (prev === "" ? "Studio" : prev));
+          }
+        }
+        
+        // Automatically skip step 1 to let user directly choose their date/time
+        setCurrentStep(2);
       }
     }
-  }, [searchParams, initialPackages]);
+  }, [searchParams, initialPackages, categories]);
 
   // Find selected package object to get price details
   const selectedPackageObj = initialPackages.find((p) => p.name === packageType);
