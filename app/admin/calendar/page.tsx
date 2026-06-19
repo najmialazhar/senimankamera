@@ -37,6 +37,23 @@ export default async function AdminCalendarPage() {
   const rawPackages = await packageRepository.findAll();
   const stats = await calendarRepository.getCalendarStats();
 
+  const rawTimeBasedBookings = await prisma.booking.findMany({
+    where: {
+      sessionStartTime: {
+        not: null,
+      },
+      status: {
+        in: ["PENDING", "APPROVED", "LUNAS", "ManualBooking"],
+      },
+    },
+    include: {
+      client: true,
+    },
+    orderBy: {
+      bookingDate: "asc",
+    },
+  });
+
   // Serialize objects for client side
   const slots = rawSlots.map((s: any) => ({
     id: s.id,
@@ -51,6 +68,7 @@ export default async function AdminCalendarPage() {
             fullName: s.booking.client.fullName,
             email: s.booking.client.email,
             phoneNumber: s.booking.client.phoneNumber,
+            instagram: s.booking.client.instagram,
           },
           packageType: s.booking.packageType,
           bookingDate: s.booking.bookingDate.toISOString(),
@@ -64,6 +82,25 @@ export default async function AdminCalendarPage() {
       : null,
     blockedReason: s.blockedReason,
     createdBy: s.createdBy,
+  }));
+
+  const timeBasedBookings = rawTimeBasedBookings.map((b: any) => ({
+    id: b.id,
+    clientId: b.clientId,
+    client: {
+      fullName: b.client.fullName,
+      email: b.client.email,
+      phoneNumber: b.client.phoneNumber,
+      instagram: b.client.instagram,
+    },
+    packageType: b.packageType,
+    bookingDate: b.bookingDate.toISOString(),
+    sessionStartTime: b.sessionStartTime,
+    sessionEndTime: b.sessionEndTime,
+    eventName: b.eventName,
+    notes: b.notes,
+    status: b.status,
+    source: b.source,
   }));
 
   const packages = rawPackages.map((p: any) => ({
@@ -91,7 +128,7 @@ export default async function AdminCalendarPage() {
 
         {/* Content Container */}
         <main className="flex-1 px-6 md:px-12 py-10 max-w-[1200px] mx-auto w-full">
-          <CalendarClient initialSlots={slots} packages={packages} stats={stats} />
+          <CalendarClient initialSlots={slots} timeBasedBookings={timeBasedBookings} packages={packages} stats={stats} />
         </main>
       </SidebarInset>
     </SidebarProvider>

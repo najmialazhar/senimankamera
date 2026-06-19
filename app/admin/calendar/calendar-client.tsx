@@ -97,15 +97,31 @@ interface CalendarStats {
   cancelled: number;
 }
 
+interface TimeBasedBooking {
+  id: string;
+  clientId: string;
+  client: Client;
+  packageType: string;
+  bookingDate: string;
+  sessionStartTime: string | null;
+  sessionEndTime: string | null;
+  eventName: string | null;
+  notes: string | null;
+  status: string;
+  source: string;
+}
+
 interface CalendarClientProps {
   initialSlots: CalendarSlot[];
+  timeBasedBookings: TimeBasedBooking[];
   packages: Package[];
   stats: CalendarStats;
 }
 
-export function CalendarClient({ initialSlots, packages, stats }: CalendarClientProps) {
+export function CalendarClient({ initialSlots, timeBasedBookings, packages, stats }: CalendarClientProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [slots, setSlots] = useState<CalendarSlot[]>(initialSlots);
+  const [timeBookings, setTimeBookings] = useState<TimeBasedBooking[]>(timeBasedBookings);
   const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
   const [isPending, startTransition] = useTransition();
   const { confirm } = useModal();
@@ -194,6 +210,13 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
     return slots.find((s) => formatDateKey(new Date(s.date)) === selectedDate);
   }, [selectedDate, slots]);
 
+  const selectedDateBookings = useMemo(() => {
+    if (!selectedDate) return [];
+    return timeBookings.filter(
+      (tb) => formatDateKey(new Date(tb.bookingDate)) === selectedDate
+    ).sort((a, b) => (a.sessionStartTime || "").localeCompare(b.sessionStartTime || ""));
+  }, [selectedDate, timeBookings]);
+
   const handlePrevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
@@ -247,13 +270,10 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
       });
 
       if (res.success && res.data) {
-        // Map created booking to slot
-        const newSlot: CalendarSlot = {
-          id: `slot-${res.data.id}`,
-          date: res.data.bookingDate,
-          status: res.data.status,
-          bookingId: res.data.id,
-          booking: {
+        const isTimeBased = !!res.data.sessionStartTime;
+
+        if (isTimeBased) {
+          const newTimeBooking: TimeBasedBooking = {
             id: res.data.id,
             clientId: res.data.clientId,
             client: {
@@ -264,18 +284,66 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
             },
             packageType: res.data.packageType,
             bookingDate: res.data.bookingDate,
-            eventTime: res.data.eventTime,
+            sessionStartTime: res.data.sessionStartTime,
+            sessionEndTime: res.data.sessionEndTime,
             eventName: res.data.eventName,
-            eventLocation: res.data.eventLocation,
             notes: res.data.notes,
             status: res.data.status,
             source: "manual",
-          },
-          blockedReason: null,
-          createdBy: "Admin",
-        };
+          };
 
-        setSlots((prev) => [...prev, newSlot]);
+          setTimeBookings((prev) => [...prev, newTimeBooking]);
+
+          // Add CalendarSlot if not already existing
+          setSlots((prev) => {
+            const hasSlot = prev.some(
+              (s) => formatDateKey(new Date(s.date)) === formatDateKey(new Date(res.data.bookingDate))
+            );
+            if (!hasSlot) {
+              const newSlot: CalendarSlot = {
+                id: `slot-tb-${res.data.id}`,
+                date: res.data.bookingDate,
+                status: "TIME_BASED_ACTIVE",
+                bookingId: null,
+                booking: null,
+                blockedReason: null,
+                createdBy: "Admin",
+              };
+              return [...prev, newSlot];
+            }
+            return prev;
+          });
+        } else {
+          // Map created booking to slot
+          const newSlot: CalendarSlot = {
+            id: `slot-${res.data.id}`,
+            date: res.data.bookingDate,
+            status: res.data.status,
+            bookingId: res.data.id,
+            booking: {
+              id: res.data.id,
+              clientId: res.data.clientId,
+              client: {
+                fullName: bookingForm.fullName,
+                email: bookingForm.email,
+                phoneNumber: bookingForm.phoneNumber || null,
+                instagram: bookingForm.instagram || null,
+              },
+              packageType: res.data.packageType,
+              bookingDate: res.data.bookingDate,
+              eventTime: res.data.eventTime,
+              eventName: res.data.eventName,
+              eventLocation: res.data.eventLocation,
+              notes: res.data.notes,
+              status: res.data.status,
+              source: "manual",
+            },
+            blockedReason: null,
+            createdBy: "Admin",
+          };
+          setSlots((prev) => [...prev, newSlot]);
+        }
+
         setIsBookingOpen(false);
         setBookingForm({
           fullName: "",
@@ -317,6 +385,40 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
             );
           }
         });
+
+        // Update local timeBookings state
+        setTimeBookings((prev) => {
+          const statusUpper = status.toUpperCase();
+          if (["REJECTED", "CANCELLED", "COMPLETED"].includes(statusUpper)) {
+            const updated = prev.filter((tb) => tb.id !== id);
+            // Check if there are any remaining active timeBookings for this date
+            const targetBooking = prev.find((tb) => tb.id === id);
+            if (targetBooking) {
+              const dateKey = formatDateKey(new Date(targetBooking.bookingDate));
+              const hasRemaining = updated.some(
+                (tb) => formatDateKey(new Date(tb.bookingDate)) === dateKey
+              );
+              if (!hasRemaining) {
+                // Remove the CalendarSlot from slots state
+                setSlots((prevSlots) =>
+                  prevSlots.filter(
+                    (s) =>
+                      !(
+                        s.status === "TIME_BASED_ACTIVE" &&
+                        formatDateKey(new Date(s.date)) === dateKey
+                      )
+                  )
+                );
+              }
+            }
+            return updated;
+          } else {
+            return prev.map((tb) =>
+              tb.id === id ? { ...tb, status: status } : tb
+            );
+          }
+        });
+
         toast.success(`Status booking berhasil diubah menjadi ${status}`);
       } else {
         toast.error(res.error || "Gagal memperbarui status");
@@ -329,11 +431,42 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return slots
+    // Get date-only bookings from slots
+    const dateOnlyBookings = slots
       .filter((s) => s.booking && new Date(s.date) >= today)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 4);
-  }, [slots]);
+      .map((s) => ({
+        id: s.booking!.id,
+        date: s.date,
+        clientName: s.booking!.client.fullName,
+        eventName: s.booking!.eventName || "Dokumentasi",
+        packageType: s.booking!.packageType,
+        eventTime: s.booking!.eventTime,
+        isTimeBased: false,
+      }));
+
+    // Get time-based bookings from timeBookings
+    const timeBasedItems = timeBookings
+      .filter((tb) => new Date(tb.bookingDate) >= today)
+      .map((tb) => ({
+        id: tb.id,
+        date: tb.bookingDate,
+        clientName: tb.client.fullName,
+        eventName: tb.eventName || "Foto Studio Session",
+        packageType: tb.packageType,
+        eventTime: tb.sessionStartTime,
+        isTimeBased: true,
+      }));
+
+    // Combine, sort by date asc, then by eventTime asc if same date
+    return [...dateOnlyBookings, ...timeBasedItems]
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) return dateA - dateB;
+        return (a.eventTime || "").localeCompare(b.eventTime || "");
+      })
+      .slice(0, 6);
+  }, [slots, timeBookings]);
 
   // Calendar render helpers
   const monthYearLabel = currentDate.toLocaleDateString("id-ID", {
@@ -443,6 +576,9 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
                 } else if (statusUpper === "MANUALBOOKING") {
                   cellClass = "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30 text-blue-800 dark:text-blue-400 font-semibold";
                   indicatorColor = "bg-blue-500";
+                } else if (statusUpper === "TIME_BASED_ACTIVE") {
+                  cellClass = "bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-900/30 text-violet-800 dark:text-violet-400 font-semibold";
+                  indicatorColor = "bg-violet-500";
                 }
               }
 
@@ -468,7 +604,16 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
                   </div>
                   {slot && (
                     <span className="text-[8px] uppercase tracking-wider font-bold truncate max-w-full block">
-                      {slot.status === "ManualBlock" ? "Blocked" : (slot.booking?.client.fullName || "Studio")}
+                      {slot.status === "ManualBlock"
+                        ? "Blocked"
+                        : slot.status === "TIME_BASED_ACTIVE"
+                        ? (() => {
+                            const count = timeBookings.filter(
+                              (tb) => formatDateKey(new Date(tb.bookingDate)) === formatted
+                            ).length;
+                            return `${count} Sesi`;
+                          })()
+                        : (slot.booking?.client.fullName || "Studio")}
                     </span>
                   )}
                 </button>
@@ -493,6 +638,10 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 bg-blue-100 border border-blue-200 block" />
               <span>Manual</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 bg-violet-100 border border-violet-200 block" />
+              <span>Sesi Studio (Time Based)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 bg-neutral-100 border border-neutral-200 block" />
@@ -523,10 +672,10 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
                 )}
               </CardDescription>
             </CardHeader>
+
             <CardContent className="pt-6">
               {selectedDate ? (
-                selectedSlot ? (
-                  selectedSlot.status === "ManualBlock" ? (
+                selectedSlot?.status === "ManualBlock" ? (
                     /* MANUALLY BLOCKED VIEW */
                     <div className="space-y-4">
                       <div className="bg-neutral-50 dark:bg-neutral-900 border border-border/30 p-4 rounded-none">
@@ -551,8 +700,138 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
                         <Unlock className="w-3.5 h-3.5" /> Buka Blokir Tanggal
                       </Button>
                     </div>
-                  ) : (
-                    /* BOOKING VIEW */
+                  ) : (selectedSlot?.status === "TIME_BASED_ACTIVE" || selectedDateBookings.length > 0) ? (
+                    /* TIME BASED LIST VIEW */
+                    <div className="space-y-6">
+                      <div className="bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900/30 p-4 flex justify-between items-center rounded-none">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-violet-800 dark:text-violet-400 block">Kategori</span>
+                          <span className="font-sans text-xs font-semibold uppercase tracking-wider block mt-1 text-violet-900 dark:text-violet-300">
+                            Sesi Studio ({selectedDateBookings.length} Sesi)
+                          </span>
+                        </div>
+                        <Badge className="bg-violet-600 text-white font-sans text-[9px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-none border-none">
+                          Time Based
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-6 max-h-[450px] overflow-y-auto pr-1">
+                        {selectedDateBookings.length === 0 ? (
+                          <p className="text-center font-sans text-xs text-secondary/60 py-6 italic">
+                            Tidak ada sesi aktif hari ini.
+                          </p>
+                        ) : (
+                          selectedDateBookings.map((tb) => (
+                            <div key={tb.id} className="border border-border/40 p-4 space-y-4 rounded-none bg-card/50">
+                              {/* Time and Status Header */}
+                              <div className="flex justify-between items-center border-b border-border/10 pb-2">
+                                <div className="flex items-center gap-1.5 font-sans text-xs font-bold text-primary">
+                                  <Clock className="w-3.5 h-3.5 text-violet-600" />
+                                  <span>{tb.sessionStartTime} - {tb.sessionEndTime} WIB</span>
+                                </div>
+                                <Badge className={`font-sans text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-none border-none ${
+                                  tb.status.toUpperCase() === "PENDING"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : tb.status.toUpperCase() === "APPROVED"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-blue-100 text-blue-800"
+                                }`}>
+                                  {tb.status}
+                                </Badge>
+                              </div>
+
+                              {/* Client Info */}
+                              <div className="space-y-2 font-sans text-xs">
+                                <span className="text-[9px] uppercase font-bold text-secondary tracking-wider block border-b border-border/10 pb-0.5">Pemesan</span>
+                                <div className="space-y-1 text-secondary">
+                                  <div className="flex items-center gap-2 font-semibold text-primary">
+                                    <User className="w-3.5 h-3.5 text-secondary/70" /> {tb.client.fullName}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Mail className="w-3.5 h-3.5 text-secondary/70" /> {tb.client.email}
+                                  </div>
+                                  {tb.client.phoneNumber && (
+                                    <div className="flex items-center gap-2">
+                                      <Phone className="w-3.5 h-3.5 text-secondary/70" /> {tb.client.phoneNumber}
+                                    </div>
+                                  )}
+                                  {tb.client.instagram && (
+                                    <div className="flex items-center gap-2">
+                                      <InstagramIcon className="w-3.5 h-3.5 text-secondary/60" /> {tb.client.instagram}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Package Details */}
+                              <div className="space-y-1 text-xs font-sans">
+                                <span className="text-[9px] uppercase font-bold text-secondary tracking-wider block border-b border-border/10 pb-0.5">Acara & Paket</span>
+                                <span className="font-semibold text-primary block">{tb.eventName || "Foto Studio Session"}</span>
+                                <span className="text-[10px] text-secondary">{tb.packageType}</span>
+                                {tb.notes && (
+                                  <p className="text-[11px] text-secondary/80 italic mt-1 bg-muted/30 p-2 border-l-2 border-violet-400">
+                                    "{tb.notes}"
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Action Buttons for this session */}
+                              <div className="flex flex-wrap gap-2 pt-2 border-t border-border/10">
+                                {(tb.status.toUpperCase() === "PENDING" || tb.status === "PendingApproval") && (
+                                  <>
+                                    <Button
+                                      onClick={() => handleQuickStatusUpdate(tb.id, "APPROVED")}
+                                      disabled={isPending}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-none text-[9px] uppercase font-bold tracking-wider py-2 h-7 flex-1"
+                                    >
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleQuickStatusUpdate(tb.id, "REJECTED")}
+                                      disabled={isPending}
+                                      variant="outline"
+                                      className="border-rose-200 text-rose-600 hover:bg-rose-50 rounded-none text-[9px] uppercase font-bold tracking-wider py-2 h-7 flex-1"
+                                    >
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
+                                {(tb.status.toUpperCase() === "APPROVED" || tb.status === "Approved") && (
+                                  <>
+                                    <Button
+                                      onClick={() => handleQuickStatusUpdate(tb.id, "LUNAS")}
+                                      disabled={isPending}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-none text-[9px] uppercase font-bold tracking-wider py-2 h-7 flex-1"
+                                    >
+                                      Lunas
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleQuickStatusUpdate(tb.id, "CANCELLED")}
+                                      disabled={isPending}
+                                      variant="outline"
+                                      className="border-neutral-200 text-neutral-600 hover:bg-neutral-50 rounded-none text-[9px] uppercase font-bold tracking-wider py-2 h-7 flex-1"
+                                    >
+                                      Batal
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          onClick={() => setIsBookingOpen(true)}
+                          className="w-full rounded-none font-sans text-xs uppercase tracking-wider py-5 flex items-center justify-center gap-2 font-bold"
+                        >
+                          <Plus className="w-4 h-4" /> Buat Booking Manual
+                        </Button>
+                      </div>
+                    </div>
+                  ) : selectedSlot ? (
+                    /* NORMAL SINGLE BOOKING VIEW */
                     <div className="space-y-6">
                       <div className="bg-muted/20 border border-border/30 p-4 flex justify-between items-center rounded-none">
                         <div>
@@ -657,9 +936,8 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
                         </div>
                       )}
                     </div>
-                  )
-                ) : (
-                  /* AVAILABLE DATE VIEW */
+                  ) : (
+                    /* AVAILABLE DATE VIEW */
                   <div className="space-y-4">
                     <p className="font-sans text-xs text-green-600 font-semibold flex items-center gap-1.5 mb-2">
                       <Check className="w-4.5 h-4.5" /> Tanggal ini tersedia untuk pesanan.
@@ -704,8 +982,8 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
                     Tidak ada jadwal terdekat.
                   </p>
                 ) : (
-                  upcomingBookings.map((slot) => {
-                    const bDate = new Date(slot.date);
+                  upcomingBookings.map((item) => {
+                    const bDate = new Date(item.date);
                     const formatted = bDate.toLocaleDateString("id-ID", {
                       day: "numeric",
                       month: "short",
@@ -727,7 +1005,7 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
 
                     return (
                       <div
-                        key={slot.id}
+                        key={item.id}
                         onClick={() => setSelectedDate(formatDateKey(bDate))}
                         className="p-4 flex justify-between items-start gap-3 hover:bg-muted/10 cursor-pointer transition-colors"
                       >
@@ -739,9 +1017,16 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
                                 {badgeLabel}
                               </Badge>
                             )}
+                            {item.isTimeBased && (
+                              <Badge className="bg-violet-100 text-violet-800 rounded-none border-none text-[8px] uppercase px-1.5 py-0.2 font-semibold">
+                                Studio
+                              </Badge>
+                            )}
                           </div>
-                          <div className="font-semibold text-primary">{slot.booking?.client.fullName}</div>
-                          <div className="text-[10px] text-secondary">{slot.booking?.eventName || "Dokumentasi"} • {slot.booking?.packageType}</div>
+                          <div className="font-semibold text-primary">{item.clientName}</div>
+                          <div className="text-[10px] text-secondary">
+                            {item.eventTime ? `[Jam ${item.eventTime}] ` : ""}{item.eventName} • {item.packageType}
+                          </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-secondary/40 self-center" />
                       </div>
@@ -752,9 +1037,7 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      {/* BLOCK DATE DIALOG */}
+      </div>      {/* BLOCK DATE DIALOG */}
       {isBlockOpen && selectedDate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <Card className="w-full max-w-md rounded-none border-border/40 shadow-2xl bg-background text-foreground animate-in zoom-in-95 duration-200">
