@@ -6,7 +6,7 @@ import { createBookingAction } from "../actions/create-booking.action";
 import { getBookedDatesWithInfoAction } from "../actions/get-booked-dates-with-info.action";
 import { cancelPendingBookingAction } from "../actions/cancel-pending-booking.action";
 import { CreateBookingSchema } from "../schemas/create-booking.schema";
-import { AlertCircle, CheckCircle2, Check, FileText, Loader2 } from "lucide-react";
+import { AlertCircle, Check, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -230,7 +230,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
       if ((window as any).snap) {
         (window as any).snap.pay(activeSnapToken, {
           onSuccess: function (result: any) {
-            setCurrentStep(5);
+            router.push(`/book/success?order_id=${createdBooking?.id}`);
           },
           onPending: function (result: any) {
             setServerError("Pembayaran Anda sedang tertunda. Silakan selesaikan transfer bank Anda, atau klik tombol 'Bayar Sekarang' di bawah untuk membuka kembali detail instruksi pembayaran.");
@@ -297,7 +297,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
         if (snapToken && (window as any).snap) {
           (window as any).snap.pay(snapToken, {
             onSuccess: function (result: any) {
-              setCurrentStep(5);
+              router.push(`/book/success?order_id=${bookingData.id}`);
             },
             onPending: function (result: any) {
               setServerError("Pembayaran Anda sedang tertunda. Silakan selesaikan transfer bank Anda, atau klik tombol 'Bayar Sekarang' di bawah untuk membuka kembali detail instruksi pembayaran.");
@@ -313,7 +313,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
           // Fallback redirect if script not fully loaded
           window.location.href = snapUrl;
         } else {
-          setCurrentStep(5);
+          router.push(`/book/success?order_id=${bookingData.id}`);
         }
       } else {
         setServerError(response.error || "Gagal mengirim pesanan booking.");
@@ -326,94 +326,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     { step: 2, label: "Jadwal" },
     { step: 3, label: "Pemesan" },
     { step: 4, label: "Pembayaran" },
-    { step: 5, label: "Konfirmasi" },
   ];
-
-  // Render Step 5 (Konfirmasi Sukses)
-  if (currentStep === 5 && createdBooking) {
-    const waText = encodeURIComponent(
-      "Halo Kak, saya sudah melakukan booking dan pembayaran DP untuk acara saya. Mohon dibantu untuk proses konfirmasi booking. Terima kasih."
-    );
-    const waUrl = `https://wa.me/6285721598190?text=${waText}`;
-
-    return (
-      <div className="w-full max-w-xl mx-auto px-6 py-12 border border-border/40 bg-card text-center flex flex-col items-center animate-[fadeIn_0.5s_ease-out]">
-        <CheckCircle2 className="w-16 h-16 text-green-700 mb-6 stroke-1 animate-pulse" />
-        <h2 className="font-serif text-3xl text-primary mb-3 font-medium">Pemesanan Berhasil</h2>
-        
-        <p className="font-sans text-xs text-secondary font-light mb-8 max-w-sm leading-relaxed">
-          Pemesanan Anda telah tercatat dengan status <span className="font-semibold text-yellow-600">Menunggu Persetujuan</span>. Silakan hubungi kami untuk mempercepat proses konfirmasi booking.
-        </p>
-
-        {/* Invoice Summary Card */}
-        <div className="w-full border border-border/40 bg-muted/20 p-6 text-left mb-8 font-sans text-xs space-y-3">
-          <div className="flex justify-between border-b border-border/20 pb-2.5">
-            <span className="text-secondary font-semibold uppercase tracking-wider text-[10px]">Detail</span>
-            <span className="text-primary font-bold">Sesi {packageType}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-secondary">Nama Klien:</span>
-            <span className="text-primary font-medium">{fullName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-secondary">Nama Acara:</span>
-            <span className="text-primary font-medium">{eventName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-secondary">Tanggal Sesi:</span>
-            <span className="text-primary font-medium">
-              {new Date(bookingDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-secondary">Waktu & Lokasi:</span>
-            <span className="text-primary font-medium text-right max-w-[200px] truncate" title={eventLocation}>
-              {selectedCategoryBookingType === "TIME_BASED" && selectedSessionDuration
-                ? `${eventTime} – ${calculateEndTime(eventTime, selectedSessionDuration)}`
-                : eventTime} WIB - {selectedCategoryBookingType === "TIME_BASED" ? "Studio" : eventLocation}
-            </span>
-          </div>
-          <div className="flex justify-between pt-2 border-t border-dashed border-border/30">
-            <span className="text-secondary">Total Biaya:</span>
-            <span className="text-primary font-medium">{"Rp. " + (createdBooking.totalAmount || 0).toLocaleString("id-ID")}</span>
-          </div>
-          <div className="flex justify-between text-sm pt-2 font-bold text-primary border-t border-border/30">
-            <span>
-              {selectedCategoryBookingType === "TIME_BASED"
-                ? "Uang Muka (DP Flat):"
-                : "Uang Muka (DP 20%):"}
-            </span>
-            <span>{"Rp. " + (createdBooking.dpAmount || 0).toLocaleString("id-ID")}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4 w-full">
-          <Button 
-            onClick={() => window.open(waUrl, "_blank")}
-            className="rounded-none font-sans text-xs uppercase tracking-widest py-6 text-white bg-primary hover:opacity-90 w-full flex items-center justify-center gap-2 cursor-pointer font-bold"
-          >
-            Hubungi via WhatsApp
-          </Button>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={() => router.push("/portfolio")}
-              variant="outline"
-              className="rounded-none font-sans text-[10px] uppercase tracking-widest py-4 border-border text-primary hover:bg-neutral-100 flex-1 cursor-pointer"
-            >
-              Lihat Portofolio
-            </Button>
-            <Button 
-              onClick={() => router.push("/")}
-              variant="ghost"
-              className="rounded-none font-sans text-[10px] uppercase tracking-widest py-4 text-secondary hover:text-primary flex-1 cursor-pointer"
-            >
-              Kembali ke Beranda
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full max-w-3xl mx-auto border border-border/40 bg-card p-6 md:p-10 relative">

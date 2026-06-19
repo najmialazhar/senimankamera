@@ -29,6 +29,7 @@ import { blockDateAction } from "@/src/modules/calendar/actions/block-date.actio
 import { unblockDateAction } from "@/src/modules/calendar/actions/unblock-date.action";
 import { createManualBookingAction } from "@/src/modules/calendar/actions/create-manual-booking.action";
 import { updateBookingStatusAction } from "@/src/modules/booking/actions/update-booking-status.action";
+import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
 
 interface Client {
@@ -87,6 +88,7 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
   const [slots, setSlots] = useState<CalendarSlot[]>(initialSlots);
   const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
   const [isPending, startTransition] = useTransition();
+  const { confirm } = useModal();
 
   // Dialog states
   const [isBlockOpen, setIsBlockOpen] = useState(false);
@@ -199,7 +201,8 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
 
   const handleUnblockDate = async () => {
     if (!selectedDate) return;
-    if (!confirm("Apakah Anda yakin ingin membuka blokir tanggal ini?")) return;
+    const isConfirmed = await confirm("Apakah Anda yakin ingin membuka blokir tanggal ini?");
+    if (!isConfirmed) return;
 
     startTransition(async () => {
       const res = await unblockDateAction(selectedDate);
@@ -270,7 +273,8 @@ export function CalendarClient({ initialSlots, packages, stats }: CalendarClient
   };
 
   const handleQuickStatusUpdate = async (id: string, status: string) => {
-    if (!confirm(`Tandai booking ini sebagai ${status}?`)) return;
+    const isConfirmed = await confirm(`Tandai booking ini sebagai ${status}?`);
+    if (!isConfirmed) return;
 
     startTransition(async () => {
       const res = await updateBookingStatusAction(id, status);

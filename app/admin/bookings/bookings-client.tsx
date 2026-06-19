@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { updateBookingStatusAction } from "@/src/modules/booking/actions/update-booking-status.action";
 import { rescheduleBookingAction } from "@/src/modules/booking/actions/reschedule-booking.action";
+import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
 
 interface Client {
@@ -80,6 +81,7 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
   const [newDate, setNewDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [isPending, startTransition] = useTransition();
+  const { confirm } = useModal();
 
   // Extract unique years from booking dates
   const uniqueYears = Array.from(
@@ -123,7 +125,8 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
   });
 
   const handleStatusUpdate = async (id: string, status: string) => {
-    if (!confirm(`Apakah Anda yakin ingin mengubah status booking ini menjadi ${status}?`)) {
+    const isConfirmed = await confirm(`Apakah Anda yakin ingin mengubah status booking ini menjadi ${status}?`);
+    if (!isConfirmed) {
       return;
     }
 
