@@ -129,7 +129,9 @@ async function main() {
         "Fine Art 10x10 Heirloom Album included",
         "Curated online gallery with print store access"
       ],
-      description: "An immersive, all-day documentation of your celebration. Focused on candid emotion, editorial portraiture, and intricate details."
+      description: "An immersive, all-day documentation of your celebration. Focused on candid emotion, editorial portraiture, and intricate details.",
+      imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800&h=1000",
+      textColor: "LIGHT"
     },
     {
       name: "Artistic Portrait",
@@ -140,7 +142,9 @@ async function main() {
         "50 hand-retouched editorial images",
         "Creative direction and styling consultation"
       ],
-      description: "Editorial sessions for individuals, couples, or personal branding."
+      description: "Editorial sessions for individuals, couples, or personal branding.",
+      imageUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800&h=1000",
+      textColor: "LIGHT"
     },
     {
       name: "Event Documentation",
@@ -151,7 +155,9 @@ async function main() {
         "Rapid 48-hour turnaround for select PR images",
         "Full commercial usage rights included"
       ],
-      description: "Discreet, high-end coverage for corporate galas, private dinners, and brand launches."
+      description: "Discreet, high-end coverage for corporate galas, private dinners, and brand launches.",
+      imageUrl: "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=800&h=1000",
+      textColor: "LIGHT"
     },
     {
       name: "Milestone Graduation",
@@ -162,7 +168,9 @@ async function main() {
         "30 fully edited high-resolution digital files",
         "Individual and family/group portraits included"
       ],
-      description: "Premium editorial graduation portraits celebrating your academic milestone."
+      description: "Premium editorial graduation portraits celebrating your academic milestone.",
+      imageUrl: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&q=80&w=800&h=1000",
+      textColor: "LIGHT"
     }
   ];
 

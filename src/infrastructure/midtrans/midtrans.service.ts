@@ -12,6 +12,7 @@ export interface CreateTransactionInput {
     quantity: number;
     name: string;
   }>;
+  baseUrl?: string;
 }
 
 export class MidtransService {
@@ -31,6 +32,8 @@ export class MidtransService {
     
     const authHeader = Buffer.from(`${this.serverKey}:`).toString("base64");
 
+    const finalBaseUrl = input.baseUrl || process.env.NEXT_PUBLIC_APP_URL;
+
     const payload = {
       transaction_details: {
         order_id: input.orderId,
@@ -49,6 +52,13 @@ export class MidtransService {
         unit: "minutes",
         duration: 15,
       },
+      ...(finalBaseUrl ? {
+        callbacks: {
+          finish: `${finalBaseUrl}/book/success`,
+          unfinish: `${finalBaseUrl}/book/success`,
+          error: `${finalBaseUrl}/book/success`,
+        }
+      } : {})
     };
 
     try {

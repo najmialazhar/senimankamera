@@ -33,6 +33,9 @@ interface PackageItem {
   features: string[];
   description: string | null;
   sessionDuration: number | null;
+  imageUrl?: string | null;
+  imageStoragePath?: string | null;
+  textColor?: string | null;
 }
 
 interface BookedDateInfo {

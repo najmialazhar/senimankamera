@@ -72,16 +72,19 @@ model Category {
 }
 
 model Package {
-  id              String   @id @default(uuid())
-  name            String
-  categoryId      String
-  category        Category @relation(fields: [categoryId], references: [id])
-  price           Float
-  features        String[]
-  description     String?
-  sessionDuration Int?     // Durasi sesi dalam menit. Hanya relevan untuk kategori TIME_BASED.
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(uuid())
+  name             String
+  categoryId       String
+  category         Category @relation(fields: [categoryId], references: [id])
+  price            Float
+  features         String[]
+  description      String?
+  sessionDuration  Int?     // Durasi sesi dalam menit. Hanya relevan untuk kategori TIME_BASED.
+  imageUrl         String?
+  imageStoragePath String?
+  textColor        String?  @default("DEFAULT")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model CalendarSlot {

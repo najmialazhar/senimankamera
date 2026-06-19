@@ -4,10 +4,32 @@ import { useState, useTransition } from "react";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { createPackageAction, updatePackageAction, deletePackageAction } from "../actions/package-admin.action";
-import { Trash2, Plus, Settings, AlertCircle, Edit2, X } from "lucide-react";
+import { Trash2, Plus, Settings, AlertCircle, Edit2, X, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+function isHexColorLight(color?: string | null): boolean {
+  if (!color || color === "DEFAULT") return false;
+  if (color === "LIGHT") return true;
+  if (color === "DARK") return false;
+  
+  const hex = color.replace("#", "");
+  if (hex.length !== 6) return false;
+  
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  const hsp = Math.sqrt(
+    0.299 * (r * r) +
+    0.587 * (g * g) +
+    0.114 * (b * b)
+  );
+
+  return hsp > 127.5;
+}
 
 interface CategoryItem {
   id: string;
@@ -25,6 +47,9 @@ interface PackageItem {
   features: string[];
   description: string | null;
   sessionDuration: number | null;
+  imageUrl?: string | null;
+  imageStoragePath?: string | null;
+  textColor?: string | null;
 }
 
 interface PackageManagerProps {
@@ -34,8 +59,14 @@ interface PackageManagerProps {
 
 export function PackageManager({ initialPackages, initialCategories }: PackageManagerProps) {
   const [packages, setPackages] = useState<PackageItem[]>(initialPackages);
+  const [filterCategory, setFilterCategory] = useState<string>("ALL");
   const [isPending, startTransition] = useTransition();
   const { alert, confirm } = useModal();
+
+  // Filtered packages logic
+  const filteredPackages = filterCategory === "ALL"
+    ? packages
+    : packages.filter((pkg) => pkg.categoryId === filterCategory);
 
   // Form States
   const [editId, setEditId] = useState<string | null>(null);
@@ -45,6 +76,10 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
   const [features, setFeatures] = useState("");
   const [description, setDescription] = useState("");
   const [sessionDuration, setSessionDuration] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [textColor, setTextColor] = useState("DEFAULT");
+  const [removeBg, setRemoveBg] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCategoryObj = initialCategories.find((cat) => cat.id === category);
@@ -58,7 +93,15 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
     setFeatures("");
     setDescription("");
     setSessionDuration("");
+    setFile(null);
+    setPreviewUrl(null);
+    setTextColor("DEFAULT");
+    setRemoveBg(false);
     setError(null);
+    
+    // Reset file input element
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
   };
 
   const handleEditClick = (pkg: PackageItem) => {
@@ -69,6 +112,10 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
     setFeatures(pkg.features.join("\n"));
     setDescription(pkg.description || "");
     setSessionDuration(pkg.sessionDuration ? pkg.sessionDuration.toString() : "");
+    setFile(null);
+    setPreviewUrl(pkg.imageUrl || null);
+    setTextColor(pkg.textColor || "DEFAULT");
+    setRemoveBg(false);
     setError(null);
   };
 
@@ -82,34 +129,36 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
       return;
     }
 
-    // Split features by comma or newline
-    const featuresList = features
-      .split(/[\n,]+/)
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-
-    if (featuresList.length === 0) {
-      setError("Tulis minimal 1 fitur/fasilitas paket.");
-      return;
-    }
-
-    const sessionDurationNum = isTimeBased ? parseInt(sessionDuration) : null;
+    const sessionDurationNum = isTimeBased ? parseInt(sessionDuration, 10) : null;
     if (isTimeBased && (isNaN(sessionDurationNum!) || sessionDurationNum! <= 0)) {
       setError("Durasi sesi wajib diisi dengan angka positif untuk kategori Multi-Sesi.");
       return;
     }
 
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("categoryId", category);
+    formData.append("price", priceNum.toString());
+    formData.append("features", features);
+    if (description) {
+      formData.append("description", description);
+    }
+    if (sessionDurationNum) {
+      formData.append("sessionDuration", sessionDurationNum.toString());
+    }
+    formData.append("textColor", textColor);
+    if (file) {
+      formData.append("file", file);
+    }
+    if (editId) {
+      formData.append("id", editId);
+      formData.append("removeBg", removeBg.toString());
+    }
+
     startTransition(async () => {
       if (editId) {
         // Edit Mode
-        const response = await updatePackageAction(editId, {
-          name,
-          categoryId: category,
-          price: priceNum,
-          features: featuresList,
-          description: description || undefined,
-          sessionDuration: sessionDurationNum,
-        });
+        const response = await updatePackageAction(formData);
 
         if (response.success && response.data) {
           const updatedPkg = response.data as PackageItem;
@@ -123,14 +172,7 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
         }
       } else {
         // Create Mode
-        const response = await createPackageAction({
-          name,
-          categoryId: category,
-          price: priceNum,
-          features: featuresList,
-          description: description || undefined,
-          sessionDuration: sessionDurationNum,
-        });
+        const response = await createPackageAction(formData);
 
         if (response.success && response.data) {
           setPackages((prev) => [...prev, response.data as PackageItem]);
@@ -297,6 +339,110 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
                 />
               </div>
 
+              {/* Text Color Selection */}
+              <div className="space-y-1.5">
+                <label className="uppercase tracking-wider text-secondary font-bold block">Warna Font Kartu Paket</label>
+                <div className="flex flex-col gap-2 p-3 border border-border/40 bg-muted/5">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={textColor !== "DEFAULT"}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setTextColor("#ffffff");
+                        } else {
+                          setTextColor("DEFAULT");
+                        }
+                      }}
+                      className="h-4 w-4 rounded-none border-border accent-primary cursor-pointer"
+                    />
+                    <span className="text-secondary text-[11px] font-semibold">Gunakan Warna Kustom</span>
+                  </label>
+
+                  {textColor !== "DEFAULT" && (
+                    <div className="flex items-center gap-2.5 mt-1.5 animate-[fadeIn_0.2s_ease-out]">
+                      <input
+                        type="color"
+                        value={textColor.startsWith("#") ? textColor : "#ffffff"}
+                        onChange={(e) => setTextColor(e.target.value)}
+                        className="w-8 h-8 p-0 border border-border/50 bg-transparent cursor-pointer rounded-none"
+                      />
+                      <span className="font-mono text-[10px] text-primary uppercase font-bold">{textColor}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Background Image Upload */}
+              <div className="space-y-1.5">
+                <label className="uppercase tracking-wider text-secondary font-bold block">
+                  {editId && previewUrl && !removeBg ? "Ganti Gambar Latar (Opsional)" : "Gambar Latar (Opsional)"}
+                </label>
+                <div className="relative border border-dashed border-border/60 p-4 hover:border-primary/50 transition-colors flex flex-col items-center justify-center text-center bg-muted/10 cursor-pointer">
+                  <UploadCloud className="w-8 h-8 text-secondary/60 mb-2" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      setError(null);
+                      const selectedFile = e.target.files?.[0];
+                      if (!selectedFile) {
+                        setFile(null);
+                        setPreviewUrl(editId && !removeBg ? packages.find(item => item.id === editId)?.imageUrl || null : null);
+                        return;
+                      }
+                      if (!selectedFile.type.startsWith("image/")) {
+                        setError("Hanya file gambar yang didukung.");
+                        return;
+                      }
+                      if (selectedFile.size > 10 * 1024 * 1024) {
+                        setError("Ukuran file gambar maksimal 10 MB.");
+                        return;
+                      }
+                      setFile(selectedFile);
+                      setRemoveBg(false);
+                      setPreviewUrl(URL.createObjectURL(selectedFile));
+                    }}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                  />
+                  <span className="text-[10px] text-primary font-semibold">Klik / seret file untuk memilih</span>
+                  <span className="text-[9px] text-secondary mt-1">Format gambar (max 10MB). Auto-crop 4:5 WebP.</span>
+                </div>
+
+                {file && (
+                  <div className="mt-2 text-[10px] text-secondary/80 font-mono flex items-center justify-between bg-muted/30 p-2">
+                    <span className="truncate max-w-[180px]">{file.name}</span>
+                    <span>{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                  </div>
+                )}
+
+                {previewUrl && !removeBg && (
+                  <div className="mt-3 relative border border-border/20 aspect-[4/5] max-w-[120px] mx-auto overflow-hidden bg-neutral-50 flex items-center justify-center">
+                    <img src={previewUrl} alt="Background Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFile(null);
+                        setPreviewUrl(null);
+                        if (editId) {
+                          setRemoveBg(true);
+                        }
+                      }}
+                      className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-none p-1 shadow-md cursor-pointer transition-colors"
+                      title="Hapus gambar"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                {editId && removeBg && (
+                  <div className="mt-2 text-[10px] text-red-600 bg-red-50 dark:bg-red-950/20 p-2 border border-red-200/40">
+                    Gambar background lama ditandai untuk dihapus.
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2">
                 <Button
                   type="submit"
@@ -320,82 +466,190 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
 
             {/* List Column */}
             <div className="lg:col-span-8 border border-border/40 bg-card p-6 rounded-none space-y-6">
-              <h3 className="font-serif text-lg text-primary font-semibold flex items-center gap-2 pb-3 border-b border-border/20">
-                <Settings className="w-4 h-4" /> Paket Terdaftar ({packages.length})
+              <h3 className="font-serif text-lg text-primary font-semibold flex items-center justify-between pb-3 border-b border-border/20">
+                <span className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" /> Paket Terdaftar
+                </span>
+                <span className="font-sans text-xs text-secondary font-light">
+                  Menampilkan {filteredPackages.length} dari {packages.length} paket
+                </span>
               </h3>
 
+              {/* Category Filter Tab Bar */}
+              <div className="flex flex-wrap gap-1.5 pb-2">
+                <Button
+                  key="ALL"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFilterCategory("ALL")}
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider rounded-none transition-all duration-200 h-8 px-3 cursor-pointer",
+                    filterCategory === "ALL"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent text-secondary hover:text-primary hover:border-primary/50"
+                  )}
+                >
+                  Semua
+                </Button>
+                {initialCategories.map((cat) => (
+                  <Button
+                    key={cat.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilterCategory(cat.id)}
+                    className={cn(
+                      "text-[10px] uppercase tracking-wider rounded-none transition-all duration-200 h-8 px-3 cursor-pointer",
+                      filterCategory === cat.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-transparent text-secondary hover:text-primary hover:border-primary/50"
+                    )}
+                  >
+                    {cat.label}
+                  </Button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {packages.map((pkg) => {
+                {filteredPackages.map((pkg) => {
+                  const hasBg = !!pkg.imageUrl;
+                  const isCustomColor = pkg.textColor && pkg.textColor.startsWith("#");
+                  const isWedding = pkg.category?.name.toLowerCase() === "wedding";
+
+                  // Text styling logic:
+                  // 1. If textColor is custom hex, check if it's light using isHexColorLight
+                  // 2. Otherwise use standard defaults
+                  const isLightText = isCustomColor 
+                    ? isHexColorLight(pkg.textColor)
+                    : (pkg.textColor === "LIGHT" || 
+                       (pkg.textColor === "DEFAULT" && isWedding) ||
+                       (!pkg.textColor && isWedding) ||
+                       (hasBg && pkg.textColor !== "DARK"));
+
+                  const customStyle = isCustomColor ? { color: pkg.textColor! } : undefined;
+
                   return (
                     <div
                       key={pkg.id}
-                      className="border border-border/40 flex flex-col justify-between p-6 bg-background relative shadow-sm"
+                      className={cn(
+                        "border border-border/40 flex flex-col justify-between p-6 relative shadow-sm overflow-hidden",
+                        hasBg 
+                          ? "bg-neutral-900 border-neutral-800" 
+                          : isWedding
+                            ? "bg-neutral-950 border-neutral-800 text-neutral-100"
+                            : "bg-background text-foreground"
+                      )}
                     >
-                      <div>
-                        <div className="flex justify-between items-start gap-2 mb-3">
-                          <span className="font-sans text-[8px] uppercase tracking-widest text-primary border border-primary px-2 py-0.5 font-bold">
-                            {pkg.category?.label || "Kategori"}
-                          </span>
-                          {pkg.sessionDuration && (
-                            <span className="font-sans text-[8px] uppercase tracking-widest text-blue-800 bg-blue-100 dark:text-blue-300 dark:bg-blue-950/40 px-2 py-0.5 font-bold">
-                              {pkg.sessionDuration} Menit
+                      {/* Background Image */}
+                      {hasBg && (
+                        <img 
+                          src={pkg.imageUrl!} 
+                          alt="" 
+                          className="absolute inset-0 w-full h-full object-cover z-0" 
+                        />
+                      )}
+
+                      <div className="relative z-10 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start gap-2 mb-3">
+                            <span className={cn(
+                              "font-sans text-[8px] uppercase tracking-widest px-2 py-0.5 font-bold border",
+                              isLightText
+                                ? "text-neutral-100 border-neutral-100/30 bg-black/30 animate-pulse"
+                                : "text-primary border-primary bg-transparent"
+                            )}>
+                              {pkg.category?.label || "Kategori"}
                             </span>
+                            <div className="flex gap-1.5 items-center">
+                              {pkg.imageUrl && (
+                                <span className="font-sans text-[8px] uppercase tracking-widest text-emerald-800 bg-emerald-100 dark:text-emerald-350 dark:bg-emerald-950/40 px-2 py-0.5 font-bold">
+                                  BG Gambar
+                                </span>
+                              )}
+                              {pkg.textColor && pkg.textColor !== "DEFAULT" && (
+                                <span className="font-sans text-[8px] uppercase tracking-widest text-purple-800 bg-purple-100 dark:text-purple-350 dark:bg-purple-950/40 px-2 py-0.5 font-bold">
+                                  Font: {pkg.textColor.startsWith("#") ? pkg.textColor : (pkg.textColor === "LIGHT" ? "Putih" : "Hitam")}
+                                </span>
+                              )}
+                              {pkg.sessionDuration && (
+                                <span className="font-sans text-[8px] uppercase tracking-widest text-blue-800 bg-blue-100 dark:text-blue-300 dark:bg-blue-950/40 px-2 py-0.5 font-bold">
+                                  {pkg.sessionDuration} Menit
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <h4 
+                            style={customStyle}
+                            className={cn("font-serif text-lg font-semibold mb-2", isLightText ? "text-white" : "text-primary")}
+                          >
+                            {pkg.name}
+                          </h4>
+                          
+                          {pkg.description && (
+                            <p 
+                              style={isCustomColor ? { color: pkg.textColor!, opacity: 0.8 } : undefined}
+                              className={cn("font-sans text-xs mb-4 font-light leading-relaxed", isLightText ? "text-neutral-300" : "text-secondary/70")}
+                            >
+                              {pkg.description}
+                            </p>
                           )}
+
+                          <div 
+                            style={isCustomColor ? { color: pkg.textColor!, borderColor: `${pkg.textColor!}33` } : undefined}
+                            className={cn("text-xl font-serif mb-4 pb-3 border-b font-medium", isLightText ? "text-white border-neutral-800" : "text-primary border-border/20")}
+                          >
+                            {"Rp. " + pkg.price.toLocaleString("id-ID")}
+                          </div>
+
+                          <ul className={cn("space-y-2 font-sans text-[11px]", isLightText ? "text-neutral-200" : "text-secondary")}>
+                            {pkg.features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start gap-2.5">
+                                <span 
+                                  style={isCustomColor ? { backgroundColor: pkg.textColor! } : undefined}
+                                  className={cn("w-1 h-1 rounded-full flex-shrink-0 mt-1.5", isLightText ? "bg-white" : "bg-primary")} 
+                                />
+                                <span style={customStyle}>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        
-                        <h4 className="font-serif text-lg font-semibold text-primary mb-2">{pkg.name}</h4>
-                        
-                        {pkg.description && (
-                          <p className="font-sans text-xs text-secondary/70 mb-4 font-light leading-relaxed">
-                            {pkg.description}
-                          </p>
-                        )}
 
-                        <div className="text-xl font-serif text-primary mb-4 pb-3 border-b border-border/20 font-medium">
-                          {"Rp. " + pkg.price.toLocaleString("id-ID")}
+                        <div className={cn("pt-4 border-t mt-6 flex justify-end gap-1", isLightText ? "border-neutral-800" : "border-border/20")}>
+                          <Button
+                            onClick={() => handleEditClick(pkg)}
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-8 w-8 cursor-pointer rounded-none", isLightText ? "text-neutral-300 hover:bg-neutral-800 hover:text-white" : "text-primary hover:bg-muted")}
+                            title="Edit Paket"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            onClick={() => handleDelete(pkg.id)}
+                            disabled={isPending}
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-8 w-8 cursor-pointer rounded-none", isLightText ? "text-red-400 hover:bg-red-950/40 hover:text-red-300" : "text-red-700 hover:bg-red-50 hover:text-red-800")}
+                            title="Hapus Paket"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-
-                        <ul className="space-y-2 font-sans text-[11px] text-secondary">
-                          {pkg.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-2.5">
-                              <span className="w-1 h-1 rounded-full bg-primary flex-shrink-0 mt-1.5" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="pt-4 border-t border-border/20 mt-6 flex justify-end gap-1">
-                        <Button
-                          onClick={() => handleEditClick(pkg)}
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-primary hover:bg-muted cursor-pointer"
-                          title="Edit Paket"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => handleDelete(pkg.id)}
-                          disabled={isPending}
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-700 hover:bg-red-50 hover:text-red-800 cursor-pointer"
-                          title="Hapus Paket"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {packages.length === 0 && (
+              {packages.length === 0 ? (
                 <div className="text-center py-16 text-secondary font-sans text-xs italic">
                   Belum ada paket terdaftar.
                 </div>
-              )}
+              ) : filteredPackages.length === 0 ? (
+                <div className="text-center py-16 text-secondary font-sans text-xs italic">
+                  Tidak ada paket untuk kategori ini.
+                </div>
+              ) : null}
             </div>
 
           </div>

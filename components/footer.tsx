@@ -13,7 +13,7 @@ export function Footer() {
         <div className="flex items-center gap-4 border border-border/30 bg-muted/10 px-5 py-3 rounded-none w-fit max-w-[90vw] mx-auto text-left">
           <div className="w-12 h-12 rounded-full overflow-hidden bg-neutral-200 border border-border flex-shrink-0">
             <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200"
+              src="/owner.jpg"
               alt="Owner"
               className="w-full h-full object-cover"
             />
@@ -60,7 +60,7 @@ export function Footer() {
 
         {/* Brand Tagline */}
         <p className="font-sans text-[10px] uppercase tracking-widest text-secondary mt-8">
-          © {new Date().getFullYear()} SENIMAN_KAMERA PHOTOSHOOT. SANG SENIMAN DI BALIK LENSA.
+          © {new Date().getFullYear()} SENIMAN_KAMERA PHOTOSHOOT. Capture Your Moments Before it Turns into a Memory.
         </p>
       </div>
     </footer>

@@ -22,6 +22,30 @@ interface PackageItem {
   features: string[];
   description: string | null;
   sessionDuration: number | null;
+  imageUrl?: string | null;
+  imageStoragePath?: string | null;
+  textColor?: string | null;
+}
+
+function isHexColorLight(color?: string | null): boolean {
+  if (!color || color === "DEFAULT") return false;
+  if (color === "LIGHT") return true;
+  if (color === "DARK") return false;
+  
+  const hex = color.replace("#", "");
+  if (hex.length !== 6) return false;
+  
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  const hsp = Math.sqrt(
+    0.299 * (r * r) +
+    0.587 * (g * g) +
+    0.114 * (b * b)
+  );
+
+  return hsp > 127.5;
 }
 
 interface StepPilihPaketProps {
@@ -54,6 +78,7 @@ export function StepPilihPaket({
   // Sync selectedCategory state when selectedCategoryId or selectedPackageName prop updates (e.g. pre-filled from query param after mount)
   useEffect(() => {
     if (selectedCategoryId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedCategory(selectedCategoryId);
     } else if (selectedPackageName) {
       const pkg = initialPackages.find(
@@ -190,48 +215,108 @@ export function StepPilihPaket({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {activePackages.map((pkg) => {
                   const isSelected = selectedPackageName === pkg.name;
+                  const hasBg = !!pkg.imageUrl;
+                  const isCustomColor = pkg.textColor && pkg.textColor.startsWith("#");
+                  const activeCategory = categories.find((c) => c.id === selectedCategory);
+                  const isWedding = activeCategory?.name.toLowerCase() === "wedding";
+
+                  // Text styling logic
+                  const isLightText = isCustomColor 
+                    ? isHexColorLight(pkg.textColor)
+                    : (pkg.textColor === "LIGHT" || 
+                       (pkg.textColor === "DEFAULT" && isWedding) ||
+                       (!pkg.textColor && isWedding) ||
+                       (hasBg && pkg.textColor !== "DARK"));
+
+                  const customStyle = isCustomColor ? { color: pkg.textColor! } : undefined;
 
                   return (
                     <div
                       key={pkg.id}
                       onClick={() => handleSelectPackageLocal(pkg)}
                       className={cn(
-                        "border p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[350px] rounded-none bg-card relative",
+                        "border p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[350px] rounded-none relative overflow-hidden",
                         isSelected
                           ? "border-primary ring-1 ring-primary"
-                          : "border-border/40 hover:border-primary/60"
+                          : "border-border/40 hover:border-primary/60",
+                        hasBg 
+                          ? "bg-neutral-900 border-neutral-800" 
+                          : isWedding
+                            ? "bg-neutral-950 border-neutral-800 text-neutral-100"
+                            : "bg-card text-foreground"
                       )}
                     >
+                      {/* Background Image */}
+                      {hasBg && (
+                        <img 
+                          src={pkg.imageUrl!} 
+                          alt="" 
+                          className="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-700 hover:scale-105" 
+                        />
+                      )}
+
                       {isSelected && (
-                        <div className="absolute top-4 right-4 bg-primary text-primary-foreground p-1 rounded-none">
+                        <div className="absolute top-4 right-4 bg-primary text-primary-foreground p-1 rounded-none z-20">
                           <Check className="w-4 h-4" />
                         </div>
                       )}
                       
-                      <div>
-                        <h4 className="font-serif text-xl text-primary mb-2 font-medium flex items-center gap-2 flex-wrap">
+                      <div className="flex-1 overflow-y-auto pr-1 mb-4 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] relative z-10">
+                        <h4 
+                          style={customStyle}
+                          className={cn(
+                            "font-serif text-xl mb-2 font-medium flex items-center gap-2 flex-wrap",
+                            isLightText ? "text-white" : "text-primary"
+                          )}
+                        >
                           {pkg.name}
                           {pkg.sessionDuration && (
-                            <span className="font-sans text-[8px] uppercase tracking-wider px-2 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-900/30">
+                            <span className={cn(
+                              "font-sans text-[8px] uppercase tracking-wider px-2 py-0.5 font-bold border",
+                              isLightText
+                                ? "bg-black/30 text-white border-white/20"
+                                : "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/30"
+                            )}>
                               {pkg.sessionDuration} Menit
                             </span>
                           )}
                         </h4>
                         {pkg.description && (
-                          <p className="font-sans text-xs text-secondary mb-4 font-light leading-relaxed">
+                          <p 
+                            style={isCustomColor ? { color: pkg.textColor!, opacity: 0.8 } : undefined}
+                            className={cn(
+                              "font-sans text-xs mb-4 font-light leading-relaxed",
+                              isLightText ? "text-neutral-300" : "text-secondary"
+                            )}
+                          >
                             {pkg.description}
                           </p>
                         )}
                         
-                        <div className="text-2xl font-serif text-primary mb-5 border-b border-border/20 pb-4 font-medium">
+                        <div 
+                          style={isCustomColor ? { color: pkg.textColor!, borderColor: `${pkg.textColor!}33` } : undefined}
+                          className={cn(
+                            "text-2xl font-serif mb-5 border-b pb-4 font-medium",
+                            isLightText ? "text-white border-neutral-800" : "text-primary border-border/20"
+                          )}
+                        >
                           {"Rp. " + pkg.price.toLocaleString("id-ID")}
                         </div>
 
-                        <ul className="space-y-2.5 font-sans text-[11px] text-secondary mb-6">
+                        <ul className={cn(
+                          "space-y-2.5 font-sans text-[11px] mb-6",
+                          isLightText ? "text-neutral-200" : "text-secondary"
+                        )}>
                           {pkg.features.map((feature, idx) => (
                             <li key={idx} className="flex items-start gap-2.5">
-                              <span className="w-1 h-1 rounded-full bg-primary flex-shrink-0 mt-1.5" />
-                              <span>{feature}</span>
+                              <span 
+                                style={isCustomColor ? { backgroundColor: pkg.textColor! } : undefined}
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5",
+                                  isLightText ? "bg-white" : "bg-primary"
+                                )} 
+                              />
+                              <span style={customStyle}>{feature}</span>
                             </li>
                           ))}
                         </ul>
@@ -239,10 +324,16 @@ export function StepPilihPaket({
 
                       <Button
                         type="button"
-                        variant={isSelected ? "default" : "outline"}
-                        className="w-full font-sans text-[10px] uppercase tracking-widest py-4 rounded-none mt-auto"
+                        className={cn(
+                          "w-full font-sans text-[10px] uppercase tracking-widest py-4 rounded-none mt-auto cursor-pointer relative z-10",
+                          isSelected
+                            ? "bg-primary text-white"
+                            : isLightText
+                              ? "bg-white text-black hover:bg-neutral-200"
+                              : "bg-transparent text-primary border border-border/40 hover:bg-muted"
+                        )}
                       >
-                        {isSelected ? "Paket Terpilih" : "Pilih Paket Ini"}
+                        {isSelected ? "Paket Terpilih ✓" : "Pilih Paket Ini"}
                       </Button>
                     </div>
                   );

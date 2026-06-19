@@ -5,12 +5,18 @@ import { CreateBookingUseCase } from "../use-cases/create-booking.use-case";
 import { CreateBookingInputType } from "../schemas/create-booking.schema";
 import { revalidatePath } from "next/cache";
 import { TelegramService } from "@/src/infrastructure/telegram/telegram.service";
+import { headers } from "next/headers";
 
 export async function createBookingAction(input: CreateBookingInputType) {
   try {
+    const headersList = await headers();
+    const host = headersList.get("host") || "localhost:3000";
+    const protocol = headersList.get("x-forwarded-proto") || "http";
+    const baseUrl = `${protocol}://${host}`;
+
     const repository = new BookingRepository();
     const useCase = new CreateBookingUseCase(repository);
-    const booking = await useCase.execute(input);
+    const booking = await useCase.execute(input, baseUrl);
 
 
     // Revalidate the admin dashboard to reflect new entries immediately

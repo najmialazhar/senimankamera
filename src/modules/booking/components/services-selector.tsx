@@ -22,6 +22,30 @@ interface PackageItem {
   price: number;
   features: string[];
   description: string | null;
+  imageUrl?: string | null;
+  imageStoragePath?: string | null;
+  textColor?: string | null;
+}
+
+function isHexColorLight(color?: string | null): boolean {
+  if (!color || color === "DEFAULT") return false;
+  if (color === "LIGHT") return true;
+  if (color === "DARK") return false;
+  
+  const hex = color.replace("#", "");
+  if (hex.length !== 6) return false;
+  
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  const hsp = Math.sqrt(
+    0.299 * (r * r) +
+    0.587 * (g * g) +
+    0.114 * (b * b)
+  );
+
+  return hsp > 127.5;
 }
 
 interface ServicesSelectorProps {
@@ -36,6 +60,10 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
   const activePackages = selectedCategory
     ? initialPackages.filter((pkg) => pkg.categoryId === selectedCategory)
     : [];
+
+  const activeCategory = categories.find((cat) => cat.id === selectedCategory);
+  const categoryName = activeCategory?.name.toLowerCase();
+  const isWedding = categoryName === "wedding";
 
 
 
@@ -138,33 +166,91 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
             ) : (
               <div className={cn(
                 "grid gap-8 items-start",
-                activePackages.length === 1 ? "grid-cols-1 max-w-3xl mx-auto" : "grid-cols-1 lg:grid-cols-2"
+                activePackages.length === 1 ? "grid-cols-1 max-w-[380px] mx-auto" : "grid-cols-1 lg:grid-cols-2"
               )}>
                 {activePackages.map((pkg) => {
+                  const hasBg = !!pkg.imageUrl;
+                  const isCustomColor = pkg.textColor && pkg.textColor.startsWith("#");
+                  
+                  // Text styling logic:
+                  // 1. If textColor is custom hex, check if it's light using isHexColorLight
+                  // 2. Otherwise use standard defaults
+                  const isLightText = isCustomColor 
+                    ? isHexColorLight(pkg.textColor)
+                    : (pkg.textColor === "LIGHT" || 
+                       (pkg.textColor === "DEFAULT" && isWedding) ||
+                       (!pkg.textColor && isWedding) ||
+                       (hasBg && pkg.textColor !== "DARK"));
+
+                  const customStyle = isCustomColor ? { color: pkg.textColor! } : undefined;
+
                   return (
                     <div
                       key={pkg.id}
-                      className="bg-card border border-border/40 p-8 md:p-10 hover:-translate-y-1 transition-all duration-300 shadow-sm relative flex flex-col justify-between min-h-[450px]"
+                      className={cn(
+                        "border transition-all duration-300 shadow-sm relative flex flex-col justify-between w-full max-w-[380px] aspect-[4/5] mx-auto p-6 md:p-8 hover:-translate-y-1 overflow-hidden",
+                        hasBg 
+                          ? "bg-neutral-900 border-neutral-800" 
+                          : isWedding
+                            ? "bg-neutral-950 border-neutral-800 text-neutral-100"
+                            : "bg-card border-border/40 text-foreground"
+                      )}
                     >
-                      <div>
-                        <h3 className="font-serif text-2xl md:text-3xl text-primary mb-3 font-medium">
+                      {/* Background Image */}
+                      {hasBg && (
+                        <img 
+                          src={pkg.imageUrl!} 
+                          alt="" 
+                          className="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-700 hover:scale-105" 
+                        />
+                      )}
+
+                      <div className="flex-1 overflow-y-auto pr-1 mb-4 [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] relative z-10">
+                        <h3 
+                          style={customStyle}
+                          className={cn(
+                            "font-serif text-xl md:text-2xl mb-2 font-medium",
+                            isLightText ? "text-white" : "text-primary"
+                          )}
+                        >
                           {pkg.name}
                         </h3>
                         {pkg.description && (
-                          <p className="font-sans text-sm text-secondary mb-6 font-light leading-relaxed">
+                          <p 
+                            style={isCustomColor ? { color: pkg.textColor!, opacity: 0.8 } : undefined}
+                            className={cn(
+                              "font-sans text-xs md:text-sm mb-4 font-light leading-relaxed",
+                              isLightText ? "text-neutral-300" : "text-secondary"
+                            )}
+                          >
                             {pkg.description}
                           </p>
                         )}
                         
-                        <div className="text-3xl font-serif text-primary mb-8 border-b border-border/20 pb-6 font-medium">
+                        <div 
+                          style={isCustomColor ? { color: pkg.textColor!, borderColor: `${pkg.textColor!}33` } : undefined}
+                          className={cn(
+                            "text-2xl md:text-3xl font-serif mb-4 border-b pb-4 font-medium",
+                            isLightText ? "text-white border-neutral-800" : "text-primary border-border/20"
+                          )}
+                        >
                           {"Rp. " + pkg.price.toLocaleString("id-ID")}
                         </div>
 
-                        <ul className="space-y-4 font-sans text-sm text-secondary mb-8">
+                        <ul className={cn(
+                          "space-y-3 font-sans text-xs md:text-sm",
+                          isLightText ? "text-neutral-200" : "text-secondary"
+                        )}>
                           {pkg.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-3">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 mt-2" />
-                              <span>{feature}</span>
+                            <li key={idx} className="flex items-start gap-2.5">
+                              <span 
+                                style={isCustomColor ? { backgroundColor: pkg.textColor! } : undefined}
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5",
+                                  isLightText ? "bg-white" : "bg-primary"
+                                )} 
+                              />
+                              <span style={customStyle}>{feature}</span>
                             </li>
                           ))}
                         </ul>
@@ -173,7 +259,12 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
                       <Button
                         render={<Link href={`/book?package=${encodeURIComponent(pkg.name)}&categoryId=${encodeURIComponent(pkg.categoryId)}`} />}
                         nativeButton={false}
-                        className="w-full font-sans text-xs uppercase tracking-widest py-6 rounded-none mt-auto cursor-pointer"
+                        className={cn(
+                          "w-full font-sans text-[10px] md:text-xs uppercase tracking-widest py-4 md:py-5 rounded-none mt-auto cursor-pointer relative z-10",
+                          isLightText
+                            ? "bg-white text-black hover:bg-neutral-200"
+                            : "bg-primary text-white hover:opacity-90"
+                        )}
                       >
                         Pesan Sesi {pkg.name}
                       </Button>

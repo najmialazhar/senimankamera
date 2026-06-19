@@ -73,14 +73,11 @@ export default async function HomePage() {
         {/* Hero Content */}
         <div className="relative z-20 w-full px-6 md:px-20 max-w-[1440px] mx-auto pb-16 md:pb-24 text-white">
           <div className="max-w-3xl">
-            <span className="font-sans text-xs uppercase tracking-[0.2em] mb-4 block font-bold">
-              Sang Seniman di Balik Lensa
-            </span>
             <h1 className="font-serif text-4xl sm:text-5xl md:text-7xl mb-6 leading-tight font-medium">
-              Mengabadikan keanggunan yang mendalam.
+              Fotografer Bandung.
             </h1>
             <p className="font-sans text-base md:text-lg mb-10 max-w-xl font-light opacity-90 leading-relaxed">
-              Fotografi gaya editorial abadi untuk pernikahan, elopement intim, dan acara mewah. Kami membingkai momen paling berharga Anda sebagai karya seni yang tak lekang oleh waktu.
+              Capture your Moment before it turns into Memory.
             </p>
             <Link
               href="/portfolio"

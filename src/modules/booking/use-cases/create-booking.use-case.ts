@@ -15,7 +15,7 @@ function addMinutesToTime(timeStr: string, minutes: number): string {
 export class CreateBookingUseCase {
   constructor(private bookingRepository: BookingRepository) {}
 
-  async execute(input: CreateBookingInputType) {
+  async execute(input: CreateBookingInputType, baseUrl?: string) {
     // Validate schema
     const parsed = CreateBookingSchema.parse(input);
 
@@ -135,7 +135,8 @@ export class CreateBookingUseCase {
             quantity: 1,
             name: `DP - ${targetPackage?.name || parsed.packageType}`,
           }
-        ]
+        ],
+        baseUrl,
       });
     } catch (err) {
       console.error("Failed to create Midtrans Snap transaction, using fallback:", err);

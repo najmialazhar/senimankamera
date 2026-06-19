@@ -54,6 +54,9 @@ export class PackageRepository {
     features: string[];
     description?: string;
     sessionDuration?: number | null;
+    imageUrl?: string | null;
+    imageStoragePath?: string | null;
+    textColor?: string;
   }) {
     return prisma.package.create({
       data,
@@ -72,6 +75,9 @@ export class PackageRepository {
       features?: string[];
       description?: string;
       sessionDuration?: number | null;
+      imageUrl?: string | null;
+      imageStoragePath?: string | null;
+      textColor?: string;
     }
   ) {
     return prisma.package.update({
