@@ -142,9 +142,9 @@ export function BookingSuccessView({ booking }: BookingSuccessViewProps) {
       <div className="flex flex-col gap-4 w-full">
         <Button 
           onClick={() => window.open(waUrl, "_blank")}
-          className="rounded-none font-sans text-xs uppercase tracking-widest py-6 text-white bg-primary hover:opacity-90 w-full flex items-center justify-center gap-2 cursor-pointer font-bold"
+          className="rounded-none font-sans text-[10px] uppercase tracking-widest py-6 text-white bg-primary hover:opacity-90 w-full flex items-center justify-center gap-2 cursor-pointer font-bold"
         >
-          Hubungi via WhatsApp
+          Hubungi via WhatsApp Owner Untuk Konfirmasi Manual
         </Button>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button 
