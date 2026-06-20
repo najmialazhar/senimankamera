@@ -64,7 +64,7 @@ export default async function HomePage() {
         <div
           className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 hover:scale-105"
           style={{
-            backgroundImage: `url('/logo.png')`
+            backgroundImage: `url('/hero.png')`
           }}
         />
         {/* Dark Vignette Overlay */}
