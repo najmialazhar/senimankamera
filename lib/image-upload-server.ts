@@ -15,8 +15,15 @@ export function getFileFromFormData(formData: FormData, fieldName = "file"): Fil
       
       const originalFileName = (formData.get("fileName") as string) || `upload.${mimeType.split("/")[1] || "webp"}`;
       
-      // Construct a server-side File object
-      return new File([buffer], originalFileName, { type: mimeType });
+      // Construct a server-side File-like object compatible with Node.js 18/20/22+
+      return {
+        name: originalFileName,
+        type: mimeType,
+        size: buffer.length,
+        arrayBuffer: async () => {
+          return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+        }
+      } as any;
     } catch (err) {
       console.error("Failed to parse base64 file on server:", err);
       return null;
