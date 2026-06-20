@@ -95,14 +95,13 @@ export async function POST(request: Request) {
       console.log(`Telegram notification sent for Order ID: ${order_id}`);
 
     } else if (isCancelled) {
-      // Payment cancelled/expired — update paymentStatus only, keep booking for admin to review
-      await prisma.booking.update({
+      // Payment cancelled/expired/denied — delete booking from database to free the slot and keep DB clean
+      await prisma.booking.delete({
         where: { id: order_id },
-        data: { paymentStatus: "CANCELLED" },
-      }).catch(() => {
-        console.log(`Booking ${order_id} not found or already cancelled.`);
+      }).catch((err) => {
+        console.log(`Booking ${order_id} not found, already deleted, or error:`, err.message);
       });
-      console.log(`Payment cancelled/denied/expired for Order ID: ${order_id}`);
+      console.log(`Booking deleted due to payment cancel/deny/expire for Order ID: ${order_id}`);
     } else if (transaction_status === "pending") {
       console.log(`Payment pending for Order ID: ${order_id}`);
     }
