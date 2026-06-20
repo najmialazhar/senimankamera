@@ -139,6 +139,16 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
       return;
     }
 
+    let finalFile = file;
+    if (file && file.type.startsWith("image/")) {
+      try {
+        const { compressImage } = await import("@/lib/image-compress");
+        finalFile = await compressImage(file, 1000, 0.85);
+      } catch (err) {
+        console.error("Error compressing image:", err);
+      }
+    }
+
     const formData = new FormData();
     formData.append("name", name);
     formData.append("categoryId", category);
@@ -152,8 +162,8 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
     }
     formData.append("textColor", textColor);
     formData.append("buttonColor", buttonColor);
-    if (file) {
-      formData.append("file", file);
+    if (finalFile) {
+      formData.append("file", finalFile);
     }
     if (editId) {
       formData.append("id", editId);

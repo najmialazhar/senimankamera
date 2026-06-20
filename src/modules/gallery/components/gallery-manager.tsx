@@ -122,9 +122,19 @@ export function GalleryManager({ initialGalleries, initialCategories }: GalleryM
       return;
     }
 
+    let finalFile = file;
+    if (file && file.type.startsWith("image/")) {
+      try {
+        const { compressImage } = await import("@/lib/image-compress");
+        finalFile = await compressImage(file);
+      } catch (err) {
+        console.error("Error compressing image:", err);
+      }
+    }
+
     const formData = new FormData();
-    if (file) {
-      formData.append("file", file);
+    if (finalFile) {
+      formData.append("file", finalFile);
     }
     formData.append("title", title);
     formData.append("category", category);

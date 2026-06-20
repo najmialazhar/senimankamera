@@ -124,9 +124,20 @@ export function TestimonialManager({ initialTestimonials }: TestimonialManagerPr
       return;
     }
 
+    let finalFile = file;
+    if (file && file.type.startsWith("image/")) {
+      try {
+        const { compressImage } = await import("@/lib/image-compress");
+        // Testimonial avatar can be compressed to a smaller size, e.g. maxWidth = 500
+        finalFile = await compressImage(file, 500, 0.8);
+      } catch (err) {
+        console.error("Error compressing image:", err);
+      }
+    }
+
     const formData = new FormData();
-    if (file) {
-      formData.append("file", file);
+    if (finalFile) {
+      formData.append("file", finalFile);
     }
     formData.append("name", name);
     formData.append("role", role);
