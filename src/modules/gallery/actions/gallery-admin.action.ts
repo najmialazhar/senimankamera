@@ -3,8 +3,6 @@
 import { GalleryRepository } from "../repositories/gallery.repository";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/src/infrastructure/supabase/server";
-import { MediaUploadService } from "../services/media-upload.service";
-import { getFileFromFormData } from "@/lib/image-upload-server";
 
 export async function createGalleryAction(data: {
   title: string;
@@ -13,15 +11,27 @@ export async function createGalleryAction(data: {
   imageUrl: string;
   aspect: string;
   description?: string;
+  mediaType?: string;
+  storagePath?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
 }) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
     const repo = new GalleryRepository();
     const item = await repo.createGallery(data);
 
     revalidatePath("/portfolio");
     revalidatePath("/admin/galleries");
 
-    return { success: true, data: item };
+    return { success: true, data: JSON.parse(JSON.stringify(item)) };
   } catch (error: any) {
     console.error("createGalleryAction error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Gagal membuat galeri." };
@@ -30,6 +40,13 @@ export async function createGalleryAction(data: {
 
 export async function deleteGalleryAction(id: number) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("Unauthorized");
+    }
+
     const repo = new GalleryRepository();
     await repo.deleteGallery(id);
 
@@ -43,7 +60,22 @@ export async function deleteGalleryAction(id: number) {
   }
 }
 
-export async function updateGalleryAction(formData: FormData) {
+export async function updateGalleryAction(
+  id: number,
+  data: {
+    title: string;
+    category: string;
+    subCategory: string;
+    aspect: string;
+    description?: string;
+    imageUrl?: string;
+    mediaType?: string;
+    storagePath?: string;
+    fileSize?: number;
+    width?: number;
+    height?: number;
+  }
+) {
   try {
     // Auth check
     const supabase = await createClient();
@@ -52,19 +84,11 @@ export async function updateGalleryAction(formData: FormData) {
       throw new Error("Unauthorized");
     }
 
-    const idStr = formData.get("id") as string;
-    if (!idStr) {
+    if (!id) {
       throw new Error("ID tidak ditemukan.");
     }
-    const id = parseInt(idStr, 10);
 
-    const title = formData.get("title") as string;
-    const category = formData.get("category") as string;
-    const subCategory = formData.get("subCategory") as string;
-    const aspect = formData.get("aspect") as string;
-    const description = (formData.get("description") as string) || undefined;
-
-    if (!title || !category || !subCategory || !aspect) {
+    if (!data.title || !data.category || !data.subCategory || !data.aspect) {
       throw new Error("Mohon lengkapi semua field yang wajib diisi.");
     }
 
@@ -74,41 +98,7 @@ export async function updateGalleryAction(formData: FormData) {
       throw new Error("Item portofolio tidak ditemukan.");
     }
 
-    let mediaData: any = {};
-    const file = getFileFromFormData(formData, "file");
-    
-    // Check if file is uploaded and valid
-    if (file && file.size > 0 && file.name !== "undefined") {
-      const uploadService = new MediaUploadService();
-      const uploadResult = await uploadService.uploadMedia(file);
-
-      mediaData = {
-        imageUrl: uploadResult.publicUrl,
-        mediaType: uploadResult.mediaType,
-        storagePath: uploadResult.storagePath,
-        fileSize: uploadResult.fileSize,
-        width: uploadResult.width,
-        height: uploadResult.height,
-      };
-
-      // Delete the old file from storage if it exists
-      if (existingItem.storagePath) {
-        try {
-          await uploadService.deleteMedia(existingItem.storagePath);
-        } catch (storageErr) {
-          console.error("Error deleting old file during update:", storageErr);
-        }
-      }
-    }
-
-    const updatedItem = await repo.updateGallery(id, {
-      title,
-      category,
-      subCategory,
-      aspect,
-      description,
-      ...mediaData,
-    });
+    const updatedItem = await repo.updateGallery(id, data);
 
     revalidatePath("/portfolio");
     revalidatePath("/admin/galleries");

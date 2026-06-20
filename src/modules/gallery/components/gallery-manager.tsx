@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
-import { uploadMediaAction } from "../actions/upload-media.action";
-import { deleteGalleryAction, updateGalleryAction } from "../actions/gallery-admin.action";
+import { createGalleryAction, deleteGalleryAction, updateGalleryAction } from "../actions/gallery-admin.action";
 import { Trash2, Plus, Image as ImageIcon, AlertCircle, FileVideo, UploadCloud, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
+import { createClient } from "@/src/infrastructure/supabase/client";
 
 interface CategoryItem {
   id: string;
@@ -122,57 +122,137 @@ export function GalleryManager({ initialGalleries, initialCategories }: GalleryM
       return;
     }
 
-    let finalFile = file;
-    let fileToSend: any = file;
-    if (file && file.type.startsWith("image/")) {
-      try {
-        const { compressImage, fileToBase64 } = await import("@/lib/image-compress");
-        finalFile = await compressImage(file);
-        fileToSend = await fileToBase64(finalFile);
-      } catch (err) {
-        console.error("Error compressing image:", err);
-      }
-    }
-
-    const formData = new FormData();
-    if (fileToSend) {
-      formData.append("file", fileToSend);
-      if (finalFile) {
-        formData.append("fileName", finalFile.name);
-      }
-    }
-    formData.append("title", title);
-    formData.append("category", category);
-    formData.append("subCategory", subCategory);
-    formData.append("aspect", aspect);
-    if (description) {
-      formData.append("description", description);
-    }
-    if (editingId !== null) {
-      formData.append("id", editingId.toString());
-    }
-
     startTransition(async () => {
-      let response;
-      if (editingId !== null) {
-        response = await updateGalleryAction(formData);
-      } else {
-        response = await uploadMediaAction(formData);
-      }
+      try {
+        let imageUrl: string | undefined = undefined;
+        let storagePath: string | undefined = undefined;
+        let fileSize: number | undefined = undefined;
+        let width: number | undefined = undefined;
+        let height: number | undefined = undefined;
+        let mediaType: string | undefined = undefined;
 
-      if (response.success && response.data) {
-        if (editingId !== null) {
-          setGalleries((prev) =>
-            prev.map((item) => (item.id === editingId ? (response.data as GalleryItem) : item))
-          );
-          toast.success("Portofolio berhasil diperbarui!");
-        } else {
-          setGalleries((prev) => [...prev, response.data as GalleryItem]);
-          toast.success("Portofolio baru berhasil diunggah!");
+        const supabase = createClient();
+
+        if (file) {
+          mediaType = file.type.startsWith("video/") ? "video" : "image";
+          fileSize = file.size;
+
+          if (mediaType === "image") {
+            try {
+              const { compressAndGetDetails } = await import("@/lib/image-compress");
+              const compressed = await compressAndGetDetails(file);
+              
+              const uuid = window.crypto.randomUUID();
+              storagePath = `images/${uuid}.webp`;
+              
+              const { error: uploadError } = await supabase.storage
+                .from("portfolio")
+                .upload(storagePath, compressed.file, {
+                  contentType: "image/webp",
+                  cacheControl: "31536000",
+                  upsert: false,
+                });
+
+              if (uploadError) throw uploadError;
+
+              const { data: { publicUrl } } = supabase.storage
+                .from("portfolio")
+                .getPublicUrl(storagePath);
+
+              imageUrl = publicUrl;
+              width = compressed.width;
+              height = compressed.height;
+              fileSize = compressed.file.size;
+            } catch (err: any) {
+              console.error("Error compressing/uploading image:", err);
+              throw new Error(`Gagal mengunggah gambar: ${err.message || err}`);
+            }
+          } else {
+            // Video upload
+            try {
+              const fileExtension = file.name.split(".").pop() || "mp4";
+              const uuid = window.crypto.randomUUID();
+              storagePath = `images/${uuid}.${fileExtension}`;
+
+              const { error: uploadError } = await supabase.storage
+                .from("portfolio")
+                .upload(storagePath, file, {
+                  contentType: file.type,
+                  cacheControl: "31536000",
+                  upsert: false,
+                });
+
+              if (uploadError) throw uploadError;
+
+              const { data: { publicUrl } } = supabase.storage
+                .from("portfolio")
+                .getPublicUrl(storagePath);
+
+              imageUrl = publicUrl;
+            } catch (err: any) {
+              console.error("Error uploading video:", err);
+              throw new Error(`Gagal mengunggah video: ${err.message || err}`);
+            }
+          }
         }
-        handleCancel();
-      } else {
-        setError(response.error || "Gagal menyimpan portofolio.");
+
+        let response;
+        if (editingId !== null) {
+          const existingItem = galleries.find((item) => item.id === editingId);
+          
+          response = await updateGalleryAction(editingId, {
+            title,
+            category,
+            subCategory,
+            aspect,
+            description: description || undefined,
+            ...(imageUrl ? { imageUrl, storagePath, fileSize, width, height, mediaType } : {}),
+          });
+
+          if (response.success && response.data) {
+            // Delete old file if a new file was uploaded successfully
+            if (file && existingItem?.storagePath) {
+              await supabase.storage.from("portfolio").remove([existingItem.storagePath]).catch((err) => {
+                console.error("Error deleting old file from storage:", err);
+              });
+            }
+          }
+        } else {
+          if (!imageUrl || !storagePath) {
+            throw new Error("Gagal memproses file upload.");
+          }
+
+          response = await createGalleryAction({
+            title,
+            category,
+            subCategory,
+            aspect,
+            description: description || undefined,
+            imageUrl,
+            storagePath,
+            fileSize,
+            width,
+            height,
+            mediaType: mediaType || "image",
+          });
+        }
+
+        if (response.success && response.data) {
+          if (editingId !== null) {
+            setGalleries((prev) =>
+              prev.map((item) => (item.id === editingId ? (response.data as GalleryItem) : item))
+            );
+            toast.success("Portofolio berhasil diperbarui!");
+          } else {
+            setGalleries((prev) => [...prev, response.data as GalleryItem]);
+            toast.success("Portofolio baru berhasil diunggah!");
+          }
+          handleCancel();
+        } else {
+          setError(response.error || "Gagal menyimpan portofolio.");
+        }
+      } catch (err: any) {
+        setError(err.message || "Terjadi kesalahan sistem.");
       }
     });
   };

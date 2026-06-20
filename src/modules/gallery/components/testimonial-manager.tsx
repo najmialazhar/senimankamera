@@ -12,6 +12,7 @@ import { Trash2, Plus, MessageSquare, AlertCircle, UploadCloud, Edit3, User, Sea
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
+import { createClient } from "@/src/infrastructure/supabase/client";
 
 interface TestimonialItem {
   id: string;
@@ -124,55 +125,89 @@ export function TestimonialManager({ initialTestimonials }: TestimonialManagerPr
       return;
     }
 
-    let finalFile = file;
-    let fileToSend: any = file;
-    if (file && file.type.startsWith("image/")) {
-      try {
-        const { compressImage, fileToBase64 } = await import("@/lib/image-compress");
-        finalFile = await compressImage(file, 500, 0.8);
-        fileToSend = await fileToBase64(finalFile);
-      } catch (err) {
-        console.error("Error compressing image:", err);
-      }
-    }
-
-    const formData = new FormData();
-    if (fileToSend) {
-      formData.append("file", fileToSend);
-      if (finalFile) {
-        formData.append("fileName", finalFile.name);
-      }
-    }
-    formData.append("name", name);
-    formData.append("role", role);
-    formData.append("content", content);
-    if (editingId !== null) {
-      formData.append("id", editingId);
-    }
-
     startTransition(async () => {
-      let response;
-      if (editingId !== null) {
-        response = await updateTestimonialAction(formData);
-      } else {
-        response = await createTestimonialAction(formData);
-      }
+      try {
+        let avatarUrl: string | null = null;
+        let storagePath: string | null = null;
 
-      if (response.success && response.data) {
-        if (editingId !== null) {
-          setTestimonials((prev) =>
-            prev.map((item) =>
-              item.id === editingId ? (response.data as TestimonialItem) : item
-            )
-          );
-          toast.success("Testimoni berhasil diperbarui!");
-        } else {
-          setTestimonials((prev) => [response.data as TestimonialItem, ...prev]);
-          toast.success("Testimoni baru berhasil ditambahkan!");
+        const supabase = createClient();
+
+        if (file) {
+          try {
+            const { compressImage } = await import("@/lib/image-compress");
+            const compressedFile = await compressImage(file, 400, 0.8);
+            
+            const uuid = window.crypto.randomUUID();
+            storagePath = `images/testimonials/${uuid}.webp`;
+
+            const { error: uploadError } = await supabase.storage
+              .from("portfolio")
+              .upload(storagePath, compressedFile, {
+                contentType: "image/webp",
+                cacheControl: "31536000",
+                upsert: false,
+              });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+              .from("portfolio")
+              .getPublicUrl(storagePath);
+
+            avatarUrl = publicUrl;
+          } catch (err: any) {
+            console.error("Error uploading avatar:", err);
+            throw new Error(`Gagal mengunggah foto profil: ${err.message || err}`);
+          }
         }
-        handleCancel();
-      } else {
-        setError(response.error || "Gagal menyimpan testimoni.");
+
+        let response;
+        if (editingId !== null) {
+          const existingItem = testimonials.find((item) => item.id === editingId);
+          
+          response = await updateTestimonialAction(editingId, {
+            name,
+            role: role || null,
+            content,
+            ...(avatarUrl ? { avatarUrl, storagePath } : {}),
+          });
+
+          if (response.success && response.data) {
+            // Delete old file if new one was uploaded
+            if (file && existingItem?.storagePath) {
+              await supabase.storage.from("portfolio").remove([existingItem.storagePath]).catch((err) => {
+                console.error("Error deleting old avatar:", err);
+              });
+            }
+          }
+        } else {
+          response = await createTestimonialAction({
+            name,
+            role: role || null,
+            content,
+            avatarUrl,
+            storagePath,
+          });
+        }
+
+        if (response.success && response.data) {
+          if (editingId !== null) {
+            setTestimonials((prev) =>
+              prev.map((item) =>
+                item.id === editingId ? (response.data as TestimonialItem) : item
+              )
+            );
+            toast.success("Testimoni berhasil diperbarui!");
+          } else {
+            setTestimonials((prev) => [response.data as TestimonialItem, ...prev]);
+            toast.success("Testimoni baru berhasil ditambahkan!");
+          }
+          handleCancel();
+        } else {
+          setError(response.error || "Gagal menyimpan testimoni.");
+        }
+      } catch (err: any) {
+        setError(err.message || "Terjadi kesalahan sistem.");
       }
     });
   };

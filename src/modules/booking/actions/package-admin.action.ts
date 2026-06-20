@@ -1,13 +1,22 @@
 "use server";
 
 import { PackageRepository } from "../repositories/package.repository";
-import { PackageImageUploadService } from "../services/package-image-upload.service";
 import { createClient } from "@/src/infrastructure/supabase/server";
 import { prisma } from "@/src/infrastructure/prisma/client";
 import { revalidatePath } from "next/cache";
-import { getFileFromFormData } from "@/lib/image-upload-server";
 
-export async function createPackageAction(formData: FormData) {
+export async function createPackageAction(data: {
+  name: string;
+  categoryId: string;
+  price: number;
+  features: string[];
+  description?: string;
+  sessionDuration?: number | null;
+  textColor?: string;
+  buttonColor?: string;
+  imageUrl?: string | null;
+  imageStoragePath?: string | null;
+}) {
   try {
     // Auth Check
     const supabase = await createClient();
@@ -16,53 +25,12 @@ export async function createPackageAction(formData: FormData) {
       throw new Error("Unauthorized");
     }
 
-    const repo = new PackageRepository();
-    const uploader = new PackageImageUploadService();
-
-    const name = formData.get("name") as string;
-    const categoryId = formData.get("categoryId") as string;
-    const priceStr = formData.get("price") as string;
-    const featuresRaw = formData.get("features") as string;
-    const description = (formData.get("description") as string) || undefined;
-    const sessionDurationStr = formData.get("sessionDuration") as string;
-    const textColor = (formData.get("textColor") as string) || "DEFAULT";
-    const buttonColor = (formData.get("buttonColor") as string) || "DEFAULT";
-    const file = getFileFromFormData(formData, "file");
-
-    if (!name || !categoryId || !priceStr || !featuresRaw) {
+    if (!data.name || !data.categoryId || isNaN(data.price) || !data.features || data.features.length === 0) {
       throw new Error("Semua field wajib diisi (Nama, Kategori, Harga, Fitur).");
     }
 
-    const price = parseFloat(priceStr);
-    const sessionDuration = sessionDurationStr ? parseInt(sessionDurationStr, 10) : null;
-
-    // Split features by comma or newline
-    const features = featuresRaw
-      .split(/[\n,]+/)
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-
-    let imageUrl: string | undefined = undefined;
-    let imageStoragePath: string | undefined = undefined;
-
-    if (file && file.size > 0) {
-      const uploadResult = await uploader.uploadPackageImage(file);
-      imageUrl = uploadResult.publicUrl;
-      imageStoragePath = uploadResult.storagePath;
-    }
-
-    const pkg = await repo.createPackage({
-      name,
-      categoryId,
-      price,
-      features,
-      description,
-      sessionDuration,
-      textColor,
-      buttonColor,
-      imageUrl,
-      imageStoragePath,
-    });
+    const repo = new PackageRepository();
+    const pkg = await repo.createPackage(data);
 
     revalidatePath("/services");
     revalidatePath("/admin/packages");
@@ -74,7 +42,21 @@ export async function createPackageAction(formData: FormData) {
   }
 }
 
-export async function updatePackageAction(formData: FormData) {
+export async function updatePackageAction(
+  id: string,
+  data: {
+    name: string;
+    categoryId: string;
+    price: number;
+    features: string[];
+    description?: string;
+    sessionDuration?: number | null;
+    textColor?: string;
+    buttonColor?: string;
+    imageUrl?: string | null;
+    imageStoragePath?: string | null;
+  }
+) {
   try {
     // Auth Check
     const supabase = await createClient();
@@ -83,76 +65,20 @@ export async function updatePackageAction(formData: FormData) {
       throw new Error("Unauthorized");
     }
 
-    const repo = new PackageRepository();
-    const uploader = new PackageImageUploadService();
-
-    const id = formData.get("id") as string;
-    const name = formData.get("name") as string;
-    const categoryId = formData.get("categoryId") as string;
-    const priceStr = formData.get("price") as string;
-    const featuresRaw = formData.get("features") as string;
-    const description = (formData.get("description") as string) || undefined;
-    const sessionDurationStr = formData.get("sessionDuration") as string;
-    const textColor = formData.get("textColor") as string || "DEFAULT";
-    const buttonColor = formData.get("buttonColor") as string || "DEFAULT";
-    const file = getFileFromFormData(formData, "file");
-    const removeBg = formData.get("removeBg") === "true";
-
-    if (!id || !name || !categoryId || !priceStr || !featuresRaw) {
+    if (!id || !data.name || !data.categoryId || isNaN(data.price) || !data.features || data.features.length === 0) {
       throw new Error("Semua field wajib diisi (ID, Nama, Kategori, Harga, Fitur).");
     }
 
-    const price = parseFloat(priceStr);
-    const sessionDuration = sessionDurationStr ? parseInt(sessionDurationStr, 10) : null;
-
-    // Split features
-    const features = featuresRaw
-      .split(/[\n,]+/)
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-
-    // Fetch existing package to check for old image
+    const repo = new PackageRepository();
     const existingPackage = await prisma.package.findUnique({
       where: { id }
     });
 
-    let imageUrl: string | null | undefined = undefined;
-    let imageStoragePath: string | null | undefined = undefined;
-
-    if (removeBg) {
-      // User requested to remove the background
-      if (existingPackage?.imageStoragePath) {
-        await uploader.deletePackageImage(existingPackage.imageStoragePath).catch(err => {
-          console.error("Failed to delete package image on update removal:", err);
-        });
-      }
-      imageUrl = null;
-      imageStoragePath = null;
-    } else if (file && file.size > 0) {
-      // User uploaded a new file
-      // Delete old file if present
-      if (existingPackage?.imageStoragePath) {
-        await uploader.deletePackageImage(existingPackage.imageStoragePath).catch(err => {
-          console.error("Failed to delete old package image:", err);
-        });
-      }
-      const uploadResult = await uploader.uploadPackageImage(file);
-      imageUrl = uploadResult.publicUrl;
-      imageStoragePath = uploadResult.storagePath;
+    if (!existingPackage) {
+      throw new Error("Paket tidak ditemukan.");
     }
 
-    const pkg = await repo.updatePackage(id, {
-      name,
-      categoryId,
-      price,
-      features,
-      description,
-      sessionDuration,
-      textColor,
-      buttonColor,
-      imageUrl,
-      imageStoragePath,
-    });
+    const pkg = await repo.updatePackage(id, data);
 
     revalidatePath("/services");
     revalidatePath("/admin/packages");
@@ -174,7 +100,6 @@ export async function deletePackageAction(id: string) {
     }
 
     const repo = new PackageRepository();
-    const uploader = new PackageImageUploadService();
 
     // Fetch existing package to check for imageStoragePath
     const existingPackage = await prisma.package.findUnique({
@@ -182,9 +107,13 @@ export async function deletePackageAction(id: string) {
     });
 
     if (existingPackage?.imageStoragePath) {
-      await uploader.deletePackageImage(existingPackage.imageStoragePath).catch(err => {
-        console.error("Failed to delete package image on delete:", err);
-      });
+      const { error: deleteError } = await supabase.storage
+        .from("portfolio")
+        .remove([existingPackage.imageStoragePath]);
+        
+      if (deleteError) {
+        console.error("Failed to delete package image on delete:", deleteError);
+      }
     }
 
     await repo.deletePackage(id);

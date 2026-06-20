@@ -1,13 +1,16 @@
 "use server";
 
 import { createClient } from "@/src/infrastructure/supabase/server";
-import { MediaUploadService } from "../services/media-upload.service";
 import { TestimonialRepository } from "../repositories/testimonial.repository";
 import { revalidatePath } from "next/cache";
 
-import { getFileFromFormData } from "@/lib/image-upload-server";
-
-export async function createTestimonialAction(formData: FormData) {
+export async function createTestimonialAction(data: {
+  name: string;
+  role: string | null;
+  content: string;
+  avatarUrl: string | null;
+  storagePath: string | null;
+}) {
   try {
     // Auth check
     const supabase = await createClient();
@@ -16,34 +19,12 @@ export async function createTestimonialAction(formData: FormData) {
       throw new Error("Unauthorized");
     }
 
-    const name = formData.get("name") as string;
-    const role = formData.get("role") as string;
-    const content = formData.get("content") as string;
-    const file = getFileFromFormData(formData, "file");
-
-    if (!name || !content) {
+    if (!data.name || !data.content) {
       throw new Error("Mohon lengkapi semua field yang wajib diisi (Nama dan Testimoni).");
     }
 
-    let avatarUrl: string | null = null;
-    let storagePath: string | null = null;
-
-    // Check if file is uploaded and valid
-    if (file && file.size > 0 && file.name !== "undefined") {
-      const uploadService = new MediaUploadService();
-      const uploadResult = await uploadService.uploadMedia(file);
-      avatarUrl = uploadResult.publicUrl;
-      storagePath = uploadResult.storagePath;
-    }
-
     const repo = new TestimonialRepository();
-    const newItem = await repo.createTestimonial({
-      name,
-      role: role || null,
-      content,
-      avatarUrl,
-      storagePath,
-    });
+    const newItem = await repo.createTestimonial(data);
 
     revalidatePath("/");
     revalidatePath("/admin/testimonials");
@@ -58,7 +39,16 @@ export async function createTestimonialAction(formData: FormData) {
   }
 }
 
-export async function updateTestimonialAction(formData: FormData) {
+export async function updateTestimonialAction(
+  id: string,
+  data: {
+    name: string;
+    role: string | null;
+    content: string;
+    avatarUrl?: string | null;
+    storagePath?: string | null;
+  }
+) {
   try {
     // Auth check
     const supabase = await createClient();
@@ -67,17 +57,11 @@ export async function updateTestimonialAction(formData: FormData) {
       throw new Error("Unauthorized");
     }
 
-    const id = formData.get("id") as string;
     if (!id) {
       throw new Error("ID tidak ditemukan.");
     }
 
-    const name = formData.get("name") as string;
-    const role = formData.get("role") as string;
-    const content = formData.get("content") as string;
-    const file = getFileFromFormData(formData, "file");
-
-    if (!name || !content) {
+    if (!data.name || !data.content) {
       throw new Error("Mohon lengkapi semua field yang wajib diisi (Nama dan Testimoni).");
     }
 
@@ -87,33 +71,7 @@ export async function updateTestimonialAction(formData: FormData) {
       throw new Error("Testimoni tidak ditemukan.");
     }
 
-    let mediaData: any = {};
-
-    // Check if file is uploaded and valid
-    if (file && file.size > 0 && file.name !== "undefined") {
-      const uploadService = new MediaUploadService();
-      const uploadResult = await uploadService.uploadMedia(file);
-      mediaData = {
-        avatarUrl: uploadResult.publicUrl,
-        storagePath: uploadResult.storagePath,
-      };
-
-      // Delete the old file from storage if it exists
-      if (existingItem.storagePath) {
-        try {
-          await uploadService.deleteMedia(existingItem.storagePath);
-        } catch (storageErr) {
-          console.error("Error deleting old file during update:", storageErr);
-        }
-      }
-    }
-
-    const updatedItem = await repo.updateTestimonial(id, {
-      name,
-      role: role || null,
-      content,
-      ...mediaData,
-    });
+    const updatedItem = await repo.updateTestimonial(id, data);
 
     revalidatePath("/");
     revalidatePath("/admin/testimonials");

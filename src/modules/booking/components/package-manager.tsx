@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/src/infrastructure/supabase/client";
 
 function isHexColorLight(color?: string | null): boolean {
   if (!color || color === "DEFAULT") return false;
@@ -139,68 +140,107 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
       return;
     }
 
-    let finalFile = file;
-    let fileToSend: any = file;
-    if (file && file.type.startsWith("image/")) {
-      try {
-        const { compressImage, fileToBase64 } = await import("@/lib/image-compress");
-        finalFile = await compressImage(file, 1000, 0.85);
-        fileToSend = await fileToBase64(finalFile);
-      } catch (err) {
-        console.error("Error compressing image:", err);
-      }
-    }
-
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("categoryId", category);
-    formData.append("price", priceNum.toString());
-    formData.append("features", features);
-    if (description) {
-      formData.append("description", description);
-    }
-    if (sessionDurationNum) {
-      formData.append("sessionDuration", sessionDurationNum.toString());
-    }
-    formData.append("textColor", textColor);
-    formData.append("buttonColor", buttonColor);
-    if (fileToSend) {
-      formData.append("file", fileToSend);
-      if (finalFile) {
-        formData.append("fileName", finalFile.name);
-      }
-    }
-    if (editId) {
-      formData.append("id", editId);
-      formData.append("removeBg", removeBg.toString());
-    }
+    // Split features
+    const featuresList = features
+      .split(/[\n,]+/)
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
 
     startTransition(async () => {
-      if (editId) {
-        // Edit Mode
-        const response = await updatePackageAction(formData);
+      try {
+        let imageUrl: string | null | undefined = undefined;
+        let imageStoragePath: string | null | undefined = undefined;
+
+        const supabase = createClient();
+
+        if (removeBg) {
+          imageUrl = null;
+          imageStoragePath = null;
+        } else if (file) {
+          try {
+            const { compressAndCropPackageImage } = await import("@/lib/image-compress");
+            const cropped = await compressAndCropPackageImage(file, 800, 1000, 0.85);
+
+            const uuid = window.crypto.randomUUID();
+            imageStoragePath = `images/packages/${uuid}.webp`;
+
+            const { error: uploadError } = await supabase.storage
+              .from("portfolio")
+              .upload(imageStoragePath, cropped, {
+                contentType: "image/webp",
+                cacheControl: "31536000",
+                upsert: false,
+              });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+              .from("portfolio")
+              .getPublicUrl(imageStoragePath);
+
+            imageUrl = publicUrl;
+          } catch (err: any) {
+            console.error("Error cropping/uploading package image:", err);
+            throw new Error(`Gagal mengunggah gambar latar: ${err.message || err}`);
+          }
+        }
+
+        let response;
+        if (editId) {
+          const existingPkg = packages.find((item) => item.id === editId);
+
+          response = await updatePackageAction(editId, {
+            name,
+            categoryId: category,
+            price: priceNum,
+            features: featuresList,
+            description: description || undefined,
+            sessionDuration: sessionDurationNum,
+            textColor,
+            buttonColor,
+            ...(imageUrl !== undefined ? { imageUrl, imageStoragePath } : {}),
+          });
+
+          if (response.success && response.data) {
+            // Cleanup old storage files if removed or replaced
+            if ((removeBg || file) && existingPkg?.imageStoragePath) {
+              await supabase.storage.from("portfolio").remove([existingPkg.imageStoragePath]).catch((err) => {
+                console.error("Error deleting old package background:", err);
+              });
+            }
+          }
+        } else {
+          response = await createPackageAction({
+            name,
+            categoryId: category,
+            price: priceNum,
+            features: featuresList,
+            description: description || undefined,
+            sessionDuration: sessionDurationNum,
+            textColor,
+            buttonColor,
+            imageUrl: imageUrl || null,
+            imageStoragePath: imageStoragePath || null,
+          });
+        }
 
         if (response.success && response.data) {
-          const updatedPkg = response.data as PackageItem;
-          setPackages((prev) =>
-            prev.map((item) => (item.id === editId ? updatedPkg : item))
-          );
-          toast.success("Paket berhasil diperbarui.");
+          const savedPkg = response.data as PackageItem;
+          if (editId) {
+            setPackages((prev) =>
+              prev.map((item) => (item.id === editId ? savedPkg : item))
+            );
+            toast.success("Paket berhasil diperbarui.");
+          } else {
+            setPackages((prev) => [...prev, savedPkg]);
+            toast.success("Paket baru berhasil ditambahkan.");
+          }
           resetForm();
         } else {
-          setError(response.error || "Gagal memperbarui paket.");
+          setError(response.error || "Gagal menyimpan paket.");
         }
-      } else {
-        // Create Mode
-        const response = await createPackageAction(formData);
-
-        if (response.success && response.data) {
-          setPackages((prev) => [...prev, response.data as PackageItem]);
-          toast.success("Paket baru berhasil ditambahkan.");
-          resetForm();
-        } else {
-          setError(response.error || "Gagal menambahkan paket.");
-        }
+      } catch (err: any) {
+        setError(err.message || "Terjadi kesalahan sistem.");
       }
     });
   };
