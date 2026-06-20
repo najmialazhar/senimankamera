@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       // Payment cancelled/expired/denied — delete booking from database to free the slot and keep DB clean
       await prisma.booking.delete({
         where: { id: order_id },
-      }).catch((err) => {
+      }).catch((err: any) => {
         console.log(`Booking ${order_id} not found, already deleted, or error:`, err.message);
       });
       console.log(`Booking deleted due to payment cancel/deny/expire for Order ID: ${order_id}`);
