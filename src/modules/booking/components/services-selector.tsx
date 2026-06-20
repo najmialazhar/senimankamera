@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
@@ -209,10 +210,12 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
                     >
                       {/* Background Image */}
                       {hasBg && (
-                        <img 
+                        <Image 
                           src={pkg.imageUrl!} 
-                          alt="" 
-                          className="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-700 hover:scale-105" 
+                          alt={pkg.name} 
+                          fill
+                          sizes="(max-width: 768px) 100vw, 40vw"
+                          className="object-cover z-0 transition-transform duration-700 hover:scale-105" 
                         />
                       )}
 

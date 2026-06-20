@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -163,10 +164,12 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
               )}
             >
               <div className="aspect-[4/5] overflow-hidden bg-muted mb-6 relative border border-border/20">
-                <img
+                <Image
                   src={item.imageUrl}
                   alt={item.title}
-                  className="w-full h-full object-cover transition-transform duration-[1.8s] ease-out group-hover:scale-105"
+                  fill
+                  sizes="(max-width: 640px) 80vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover transition-transform duration-[1.8s] ease-out group-hover:scale-105"
                   draggable={false}
                 />
               </div>

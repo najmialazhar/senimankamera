@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -267,10 +268,12 @@ export function StepPilihPaket({
                     >
                       {/* Background Image */}
                       {hasBg && (
-                        <img 
+                        <Image 
                           src={pkg.imageUrl!} 
-                          alt="" 
-                          className="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-700 hover:scale-105" 
+                          alt={pkg.name} 
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          className="object-cover z-0 transition-transform duration-700 hover:scale-105" 
                         />
                       )}
 

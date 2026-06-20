@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface GalleryItem {
@@ -100,10 +101,12 @@ export function PortfolioGrid({ initialItems, categories: dbCategories }: Portfo
                 item.aspect === "wide" && "aspect-[16/9]"
               )}
             >
-              <img
+              <Image
                 src={item.imageUrl}
                 alt={item.title}
-                className="w-full h-full object-cover transition-transform duration-[0.8s] group-hover:scale-105"
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className="object-cover transition-transform duration-[0.8s] group-hover:scale-105"
               />
             </div>
             <div>

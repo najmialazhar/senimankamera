@@ -1,4 +1,5 @@
 import { User } from "lucide-react";
+import Image from "next/image";
 import { TestimonialRepository } from "@/src/modules/gallery/repositories/testimonial.repository";
 import { ScrollAnimate } from "@/components/scroll-animate";
 import type { Metadata } from "next";
@@ -92,11 +93,13 @@ export default async function TestimonialsPage() {
                 <div className="w-full relative z-10 flex flex-col justify-between h-full">
                   {/* Client Info Block - Centered at the top */}
                   <div className="flex flex-col items-center gap-3 pb-5 border-b border-border/10 mb-5">
-                    <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100/80 border border-border/40 flex-shrink-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105 shadow-sm">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100/80 border border-border/40 flex-shrink-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105 shadow-sm relative">
                       {item.avatarUrl ? (
-                        <img
+                        <Image
                           src={item.avatarUrl}
                           alt={item.name}
+                          width={56}
+                          height={56}
                           className="w-full h-full object-cover"
                         />
                       ) : (

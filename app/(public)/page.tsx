@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, User } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -106,10 +107,12 @@ export default async function HomePage() {
           </div>
           <div className="md:col-span-5 md:col-start-8">
             <div className="aspect-[3/4] overflow-hidden bg-muted relative group border border-border/40">
-              <img
+              <Image
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7TrLGopM5nDCga32v2aev2V_AzsZGQobWWhdNhxg7mNfRiPV0PAwfAcmhloMkRLj8IDuIGKRV2I3reKSt5271erYU-haGMrUtibOR14MBJjJFq2z6p2mKeRgnTlaokDyAwZqA7sA0i4ZVU7Ejmexgle-XXIxlxUOi__uXwqEsj5rLfNnAj2WxAIaUGXV2HNP3Pzq1aq69DysPrkz1kb3vyf6amCPyLDo0jIxvPzDFbJdo2HlwYxGF0RxRKY62yO2S-LDQ3DhDZntk"
                 alt="Detail shot"
-                className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-105"
+                fill
+                sizes="(max-width: 768px) 100vw, 40vw"
+                className="object-cover transition-transform duration-[2s] group-hover:scale-105"
               />
             </div>
           </div>
@@ -181,11 +184,13 @@ export default async function HomePage() {
                     <div className="w-full relative z-10 flex flex-col justify-between h-full">
                       {/* Client Info Block - Centered at the top */}
                       <div className="flex flex-col items-center gap-3 pb-5 border-b border-border/10 mb-5">
-                        <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100/80 border border-border/40 flex-shrink-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105 shadow-sm">
+                        <div className="w-14 h-14 rounded-full overflow-hidden bg-neutral-100/80 border border-border/40 flex-shrink-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-105 shadow-sm relative">
                           {item.avatarUrl ? (
-                            <img
+                            <Image
                               src={item.avatarUrl}
                               alt={item.name}
+                              width={56}
+                              height={56}
                               className="w-full h-full object-cover"
                             />
                           ) : (
