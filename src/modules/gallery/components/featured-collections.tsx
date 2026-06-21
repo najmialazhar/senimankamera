@@ -147,7 +147,7 @@ export function FeaturedCollections({ items }: { items: GalleryItem[] }) {
         onScroll={handleScroll}
         onTouchStart={resetTimer}
         onMouseDown={resetTimer}
-        className="flex gap-8 overflow-x-auto snap-x snap-mandatory scroll-smooth px-6 md:px-20 py-4 pb-8 -mx-6 md:-mx-20 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className="flex gap-8 overflow-x-auto snap-x snap-mandatory scroll-smooth full-bleed-carousel py-4 pb-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((item, index) => {
           const isOddIndex = index % 2 === 1;
