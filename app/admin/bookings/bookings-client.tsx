@@ -547,9 +547,9 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                     </div>
                   )}
                   {selectedBooking.client.instagram && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 font-mono">
                       <InstagramIcon className="w-4 h-4 text-secondary/60" />
-                      <span>{selectedBooking.client.instagram}</span>
+                      <span>@{selectedBooking.client.instagram.replace(/^@+/, "")}</span>
                     </div>
                   )}
                 </div>

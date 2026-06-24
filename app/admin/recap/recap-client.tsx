@@ -437,7 +437,7 @@ export function RecapClient({ bookings }: RecapClientProps) {
                         <div className="font-semibold text-primary">{b.client.fullName}</div>
                         <div className="text-[10px] text-secondary mt-0.5">{b.client.email}</div>
                         {b.client.instagram && (
-                          <div className="text-[10px] text-secondary mt-0.5 font-mono">@{b.client.instagram.replace(/^@/, '')}</div>
+                          <div className="text-[10px] text-secondary mt-0.5 font-mono">@{b.client.instagram.replace(/^@+/, '')}</div>
                         )}
                       </td>
                       <td className="py-4 px-6">

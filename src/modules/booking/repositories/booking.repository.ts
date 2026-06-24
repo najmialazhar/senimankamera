@@ -35,19 +35,22 @@ export interface CreateBookingInput {
 
 export class BookingRepository {
   async createBooking(data: CreateBookingInput) {
+    const rawInstagram = data.instagram ? data.instagram.trim() : "";
+    const cleanInstagram = rawInstagram && rawInstagram !== "" ? rawInstagram.replace(/^@+/, "") : null;
+
     // Check if client exists, otherwise create
     const client = await prisma.client.upsert({
       where: { email: data.email },
       update: {
         fullName: data.fullName,
         ...(data.phoneNumber ? { phoneNumber: data.phoneNumber } : {}),
-        ...(data.instagram ? { instagram: data.instagram } : {}),
+        instagram: cleanInstagram,
       },
       create: {
         fullName: data.fullName,
         email: data.email,
         phoneNumber: data.phoneNumber,
-        instagram: data.instagram,
+        instagram: cleanInstagram,
       },
     });
 

@@ -13,11 +13,12 @@ export class CustomerRepository {
     // 1. Text Search (fullName, email, phoneNumber, instagram)
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
+      const searchInstagram = searchLower.replace(/^@+/, "");
       where.OR = [
         { fullName: { contains: searchLower, mode: "insensitive" } },
         { email: { contains: searchLower, mode: "insensitive" } },
         { phoneNumber: { contains: searchLower, mode: "insensitive" } },
-        { instagram: { contains: searchLower, mode: "insensitive" } },
+        { instagram: { contains: searchInstagram, mode: "insensitive" } },
       ];
     }
 

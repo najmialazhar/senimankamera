@@ -170,7 +170,8 @@ export function CustomerManager({
       cust.fullName.toLowerCase().includes(search.toLowerCase()) ||
       cust.email.toLowerCase().includes(search.toLowerCase()) ||
       (cust.phoneNumber && cust.phoneNumber.includes(search)) ||
-      (cust.instagram && cust.instagram.toLowerCase().includes(search.toLowerCase()));
+      (cust.instagram &&
+        cust.instagram.toLowerCase().replace(/^@+/, "").includes(search.toLowerCase().replace(/^@+/, "")));
 
     // 2. Category Filter
     let matchesCategory = true;
@@ -353,7 +354,7 @@ export function CustomerManager({
                   <input
                     type="text"
                     placeholder="username"
-                    value={instagram.replace(/^@/, "")}
+                    value={instagram.replace(/^@+/, "")}
                     onChange={(e) => setInstagram(e.target.value)}
                     className="w-full pl-7 pr-3 py-2 bg-transparent border border-border/40 focus:border-primary focus:outline-none rounded-none text-primary"
                   />
@@ -497,7 +498,7 @@ export function CustomerManager({
                           <td className="py-4 px-2">
                             {cust.instagram ? (
                               <span className="inline-flex items-center gap-1 bg-secondary/15 text-primary px-2 py-0.5 rounded-none font-mono text-[10px] font-bold">
-                                @{cust.instagram}
+                                @{cust.instagram.replace(/^@+/, "")}
                               </span>
                             ) : (
                               <span className="italic text-secondary/40">Tidak ada</span>

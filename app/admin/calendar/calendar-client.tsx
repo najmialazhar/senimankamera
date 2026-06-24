@@ -762,8 +762,8 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
                                     </div>
                                   )}
                                   {tb.client.instagram && (
-                                    <div className="flex items-center gap-2">
-                                      <InstagramIcon className="w-3.5 h-3.5 text-secondary/60" /> {tb.client.instagram}
+                                    <div className="flex items-center gap-2 font-mono">
+                                      <InstagramIcon className="w-3.5 h-3.5 text-secondary/60" /> @{tb.client.instagram.replace(/^@+/, "")}
                                     </div>
                                   )}
                                 </div>
@@ -870,8 +870,8 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
                                 </div>
                               )}
                               {selectedSlot.booking.client.instagram && (
-                                <div className="flex items-center gap-2">
-                                  <InstagramIcon className="w-3.5 h-3.5 text-secondary/60" /> {selectedSlot.booking.client.instagram}
+                                <div className="flex items-center gap-2 font-mono">
+                                  <InstagramIcon className="w-3.5 h-3.5 text-secondary/60" /> @{selectedSlot.booking.client.instagram.replace(/^@+/, "")}
                                 </div>
                               )}
                             </div>
