@@ -5,7 +5,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { getCurrentAdminAction } from "@/src/modules/auth/actions/get-current-admin.action";
 import { logoutAction } from "@/src/modules/auth/actions/login.action";
 import { useModal } from "@/components/modal-provider";
-import { ChevronDown, LogOut, Shield } from "lucide-react";
+import { ChevronDown, LogOut, Shield, Users } from "lucide-react";
+import Link from "next/link";
 
 interface AdminHeaderProps {
   title?: string;
@@ -113,6 +114,20 @@ export function AdminHeader({ title = "Manajemen Studio Seniman Kamera" }: Admin
                       : "Admin CMS"}
                   </span>
                 </div>
+
+                {/* Admin Management Link (Super Admin only) */}
+                {adminProfile.role === "SUPER_ADMIN" && (
+                  <div className="py-3 border-b border-border/20">
+                    <Link
+                      href="/admin/admins"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full py-2 px-3 text-left font-sans text-[10px] uppercase tracking-widest font-bold text-secondary hover:text-primary hover:bg-muted/30 transition-colors flex items-center gap-2 rounded-none cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-secondary" />
+                      Manajemen Admin
+                    </Link>
+                  </div>
+                )}
 
                 {/* Logout Trigger */}
                 <div className="pt-3.5">
