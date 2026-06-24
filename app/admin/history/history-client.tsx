@@ -235,7 +235,7 @@ export function HistoryClient({ initialBookings, categoryLabels }: HistoryClient
         <div>
           <h2 className="font-serif text-3xl md:text-4xl text-primary font-medium">Riwayat Pesanan</h2>
           <p className="font-sans text-xs text-secondary font-light mt-1">
-            Daftar seluruh pesanan yang sudah diselesaikan (Lunas) atau Ditolak (Rejected).
+            Daftar seluruh pesanan yang sudah diselesaikan (Lunas), Ditolak (Rejected), atau Dibatalkan (Cancelled).
           </p>
         </div>
         {selectedIds.size > 0 && (

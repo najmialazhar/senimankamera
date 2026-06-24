@@ -253,7 +253,7 @@ export class BookingRepository {
       where.status = filters.status;
     } else {
       where.status = {
-        notIn: ["LUNAS", "REJECTED"],
+        notIn: ["LUNAS", "REJECTED", "CANCELLED"],
       };
     }
 
@@ -566,7 +566,7 @@ export class BookingRepository {
     return prisma.booking.findMany({
       where: {
         status: {
-          in: ["LUNAS", "REJECTED"],
+          in: ["LUNAS", "REJECTED", "CANCELLED"],
         },
       },
       orderBy: {

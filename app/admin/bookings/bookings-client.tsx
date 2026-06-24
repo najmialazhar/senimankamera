@@ -469,20 +469,22 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                         </>
                       )}
 
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setIsRescheduleOpen(true);
-                          setNewDate(new Date(booking.bookingDate).toISOString().split("T")[0]);
-                          setRescheduleTime(booking.sessionStartTime || "");
-                        }}
-                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-100"
-                        title="Reschedule"
-                      >
-                        <CalendarDays className="w-4 h-4" />
-                      </Button>
+                      {booking.status !== "CANCELLED" && booking.status !== "REJECTED" && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setIsRescheduleOpen(true);
+                            setNewDate(new Date(booking.bookingDate).toISOString().split("T")[0]);
+                            setRescheduleTime(booking.sessionStartTime || "");
+                          }}
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-100"
+                          title="Reschedule"
+                        >
+                          <CalendarDays className="w-4 h-4" />
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -676,18 +678,20 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                 </>
               )}
 
-              <Button
-                onClick={() => {
-                  setIsDetailOpen(false);
-                  setIsRescheduleOpen(true);
-                  setNewDate(new Date(selectedBooking.bookingDate).toISOString().split("T")[0]);
-                  setRescheduleTime(selectedBooking.sessionStartTime || "");
-                }}
-                variant="outline"
-                className="rounded-none border-border font-sans text-xs uppercase tracking-wider py-5"
-              >
-                Reschedule
-              </Button>
+              {selectedBooking.status !== "CANCELLED" && selectedBooking.status !== "REJECTED" && (
+                <Button
+                  onClick={() => {
+                    setIsDetailOpen(false);
+                    setIsRescheduleOpen(true);
+                    setNewDate(new Date(selectedBooking.bookingDate).toISOString().split("T")[0]);
+                    setRescheduleTime(selectedBooking.sessionStartTime || "");
+                  }}
+                  variant="outline"
+                  className="rounded-none border-border font-sans text-xs uppercase tracking-wider py-5"
+                >
+                  Reschedule
+                </Button>
+              )}
             </div>
           </div>
         </div>
