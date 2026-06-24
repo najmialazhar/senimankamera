@@ -249,11 +249,20 @@ export class BookingRepository {
   async findAllBookings(filters: { status?: string; month?: number; year?: number; search?: string }) {
     const where: any = {};
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
     if (filters.status) {
       where.status = filters.status;
     } else {
       where.status = {
-        notIn: ["LUNAS", "REJECTED", "CANCELLED"],
+        notIn: ["REJECTED", "CANCELLED"],
+      };
+      where.NOT = {
+        status: "LUNAS",
+        bookingDate: {
+          lt: startOfToday,
+        },
       };
     }
 
@@ -563,11 +572,20 @@ export class BookingRepository {
   }
 
   async findHistoryBookings() {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
     return prisma.booking.findMany({
       where: {
-        status: {
-          in: ["LUNAS", "REJECTED", "CANCELLED"],
-        },
+        OR: [
+          { status: { in: ["REJECTED", "CANCELLED"] } },
+          {
+            status: "LUNAS",
+            bookingDate: {
+              lt: startOfToday,
+            },
+          },
+        ],
       },
       orderBy: {
         createdAt: "desc",

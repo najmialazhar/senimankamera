@@ -156,7 +156,13 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
     startTransition(async () => {
       const res = await updateBookingStatusAction(id, status);
       if (res.success && res.data) {
-        const isHistoryStatus = res.data.status === "LUNAS" || res.data.status === "REJECTED";
+        const bDate = new Date(res.data.bookingDate);
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const isHistoryStatus =
+          res.data.status === "REJECTED" ||
+          res.data.status === "CANCELLED" ||
+          (res.data.status === "LUNAS" && bDate < startOfToday);
         if (isHistoryStatus) {
           setBookings((prev) => prev.filter((b) => b.id !== id));
           if (selectedBooking?.id === id) {
