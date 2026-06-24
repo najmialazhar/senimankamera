@@ -8,8 +8,9 @@
 ## 📌 Deskripsi Singkat & Fitur Utama
 
 **Seniman Kamera** adalah aplikasi web full-stack untuk studio fotografi bergaya editorial. Memiliki dua sisi utama:
-1. **Sisi Publik** — Halaman beranda (landing page), portofolio galeri kategori, paket layanan, dan wizard form booking klien (5 langkah interaktif).
-2. **Sisi Admin** — Dashboard analitik (revenue, statistik booking), manajemen pemesanan (approval, reject, reschedule), kalender jadwal visual, manajemen portofolio (upload media, drag-and-drop reorder), manajemen paket & kategori, dan pengaturan Syarat & Ketentuan.
+1. **Sisi Publik** — Halaman beranda (landing page), portofolio galeri kategori, paket layanan (dengan label dinamis **Harian** dan **Per Jam**), dan wizard form booking klien (5 langkah interaktif).
+2. **Sisi Admin** — Dashboard analitik (revenue, statistik booking), manajemen pemesanan (approval, reject, reschedule), kalender jadwal visual, manajemen portofolio (upload media, drag-and-drop reorder), manajemen paket & kategori, pengaturan Syarat & Ketentuan (S&K), serta **Manajemen Staf Admin** terintegrasi.
+3. **Sistem Autentikasi Multi-Peran (RBAC)** — Akses panel admin terproteksi secara granular berdasarkan 3 peran admin (`SUPER_ADMIN`, `ADMIN_PESANAN`, `ADMIN_CMS`) dan dilengkapi fitur reset kata sandi mandiri menggunakan kode **OTP via Telegram**.
 
 ---
 
@@ -19,9 +20,9 @@
 * **Runtime**: Node.js 18+ (Dihosting di Vercel)
 * **Styling**: Tailwind CSS v4.0.0
 * **Database & ORM**: PostgreSQL (Supabase) + Prisma 7.8.0
-* **Autentikasi**: Supabase Auth (`@supabase/ssr` middleware)
+* **Autentikasi**: Supabase Auth (`@supabase/ssr` middleware) & Supabase Admin SDK (untuk mengelola admin dari sisi server)
 * **Pembayaran**: Midtrans Snap SDK (Pop-up modal integrasi JavaScript client-side)
-* **Notifikasi**: Telegram Bot API (Pengiriman status booking via HTTP client)
+* **Notifikasi & OTP**: Telegram Bot API (Pengiriman status booking & kode verifikasi OTP reset sandi)
 * **Drag & Drop**: `@dnd-kit/core` + `@dnd-kit/sortable` (Digunakan untuk mengurutkan galeri secara visual)
 * **Komponen Tabel & Chart**: TanStack Table v8 & Recharts
 * **Validasi Skema**: Zod v4 (Validasi form input klien & admin)
@@ -33,27 +34,29 @@
 ```
 senimankamera/
 ├── app/                        # Next.js App Router (Halaman & Layout)
-│   ├── (public)/               # Route group halaman publik (Landing Page, Portfolio, Book, dll.)
-│   ├── admin/                  # Route group panel admin (Terproteksi Middleware Auth)
-│   │   ├── bookings/           # Daftar booking aktif & persetujuan
-│   │   ├── calendar/           # Kalender jadwal visual
-│   │   ├── history/            # Halaman riwayat booking (Lunas / Rejected)
-│   │   └── recap/              # Rekap & ekspor Excel (.xlsx)
-│   ├── login/                  # Halaman login admin
-│   ├── layout.tsx              # Root Layout
-│   └── globals.css             # Konfigurasi Tailwind v4
+├── (public)/                   # Route group halaman publik (Landing Page, Portfolio, Book, dll.)
+├── admin/                      # Route group panel admin (Terproteksi Auth & Peran Server-Side)
+│   ├── admins/                 # [NEW] Manajemen staf admin terdaftar (Khusus Super Admin)
+│   ├── bookings/               # Daftar booking aktif & persetujuan
+│   ├── calendar/               # Kalender jadwal visual
+│   ├── history/                # Halaman riwayat booking (Lunas / Rejected)
+│   └── recap/                  # Rekap & ekspor Excel (.xlsx)
+├── login/                      # Halaman login admin & form reset sandi OTP
+├── layout.tsx                  # Root Layout
+└── globals.css                 # Konfigurasi Tailwind v4
 │
 ├── src/
 │   ├── modules/                # Domain-Driven Feature Modules
-│   │   ├── auth/               # Logika autentikasi admin
+│   │   ├── admin-management/   # [NEW] CRUD admin, penentuan role, & deaktivasinya
+│   │   ├── auth/               # Logika autentikasi admin & OTP reset password
 │   │   ├── booking/            # Domain pemesanan (form, repository, actions)
 │   │   ├── calendar/           # Domain kalender & pemblokiran jadwal manual
 │   │   └── gallery/            # Domain galeri foto/video & testimoni
 │   └── infrastructure/         # Integrasi eksternal & helper backend
-│       ├── prisma/             # Instance prisma client dengan adapter-pg
-│       ├── supabase/           # Middleware & Client initialization
+│       ├── prisma/             # Instance prisma client dengan pg-pooler
+│       ├── supabase/           # Middleware, Client & Admin SDK initialization
 │       ├── midtrans/           # Midtrans Snap API Service
-│       └── telegram/           # Pengiriman notifikasi Telegram Bot
+│       └── telegram/           # Pengiriman notifikasi & OTP Telegram Bot
 │
 ├── components/                 # Shared UI Components (shadcn/ui & custom)
 ├── prisma/
@@ -86,31 +89,35 @@ erDiagram
     Booking ||--o| CalendarSlot : "has (Cascade Delete)"
     Booking ||--o{ PaymentTransaction : "has (Cascade Delete)"
     Category ||--o{ Package : "has"
+    AdminProfile }|--|| AdminRole : "has role"
+    OtpToken ||--|| AdminProfile : "verifies email"
 ```
 
 ### Karakteristik Model:
 * **`Booking`**: Menampung status booking (`PENDING`, `APPROVED`, `LUNAS`, `CANCELLED`, `ManualBooking`). Terhubung ke `Client` melalui `clientId`.
 * **`CalendarSlot`**: Model unik berdasarkan tanggal (`date DateTime @unique`). Berfungsi untuk memblokir tanggal secara penuh di kalender. Jika terhubung dengan `bookingId`, penghapusan `Booking` akan memicu **`onDelete: Cascade`** pada `CalendarSlot`.
-* **`PaymentTransaction`**: Catatan riwayat pembayaran. Terbagi menjadi tipe `DP` atau `FULL`. Memiliki unique key `{bookingId}-DP` atau `{bookingId}-FULL`. Menghapus booking akan memicu **`onDelete: Cascade`** pada riwayat pembayaran ini.
+* **`PaymentTransaction`**: Catatan riwayat pembayaran. Terbagi menjadi tipe `DP` atau `FULL`. Memiliki unique key `{bookingId}-DP` or `{bookingId}-FULL`.
+* **`AdminProfile`**: [NEW] Menyimpan metadata profile admin, username unik, status aktif (`isActive`), dan peran (`role`) terikat ke UUID Supabase Auth.
+* **`OtpToken`**: [NEW] Menampung token 6-digit verifikasi OTP reset password beserta target email dan waktu kedaluwarsa (TTL 5 menit).
 
 ---
 
 ## 🔄 Aturan Logika Bisnis & Alur Kerja Utama
 
-### 1. Kategori Pemesanan: `DATE_ONLY` vs `TIME_BASED`
+### 1. Kategori Pemesanan: Harian vs Per Jam
 Sistem booking memiliki dua perilaku berdasarkan tipe pemesanan kategori layanan (`Category.bookingType`):
 
-* **`DATE_ONLY` (Pemesanan Harian)**:
+* **`DATE_ONLY` (Pemesanan Harian / Full-Day)**:
   * Digunakan untuk paket besar seperti *Wedding* atau *Prewedding*.
   * Ketika dipesan, seluruh tanggal tersebut akan langsung diblokir di kalender. 
   * Repositori menggunakan `isDateBooked(date)` untuk memeriksa keberadaan `CalendarSlot` aktif pada hari tersebut.
   * Pembuatan booking baru akan membuat `CalendarSlot` yang terhubung langsung dengan `bookingId`.
 
-* **`TIME_BASED` (Pemesanan Sesi Jam)**:
+* **`TIME_BASED` (Pemesanan Per Jam / Multi-Session)**:
   * Digunakan untuk sesi studio foto dengan durasi sesi (`Package.sessionDuration` dalam menit).
   * Hari tersebut tidak otomatis terblokir penuh kecuali admin secara manual memblokirnya (`ManualBlock`) atau ada pemesanan `DATE_ONLY`.
   * Hari tersebut ditandai dengan status `TIME_BASED_ACTIVE` di `CalendarSlot` (dengan `bookingId: null`) untuk menandai adanya sesi aktif di hari itu.
-  * Tumpang tindih jadwal diperiksa menggunakan `isTimeSlotOverlapping(date, startTime, endTime, excludeBookingId)` dengan toleransi buffer transisi antar sesi sebesar **15 menit**.
+  * Tumpang tindih jadwal diperiksa menggunakan `isTimeSlotOverlapping(date, startTime, endTime, excludeBookingId)` dengan toleransi buffer transisi sebesar **15 menit**.
 
 ---
 
@@ -128,19 +135,25 @@ Sistem booking memiliki dua perilaku berdasarkan tipe pemesanan kategori layanan
 
 * **Booking Baru**: Masuk dengan status `PENDING`. Jika booking bertipe `DATE_ONLY`, slot kalender langsung terkunci sebagai `PENDING`. Jika bertipe `TIME_BASED`, slot ditandai `TIME_BASED_ACTIVE`.
 * **Reschedule**: Admin dapat menjadwal ulang booking melalui halaman admin. Proses ini akan otomatis memperbarui tanggal booking dan memindahkan slot kalender ke tanggal baru, serta menghapus slot lama jika sudah tidak ada sesi aktif tersisa.
+* **Konfirmasi Manual via WhatsApp**: Begitu pembayaran DP diterima (`APPROVED` / `LUNAS`), klien **diwajibkan** melakukan konfirmasi manual melalui tombol WhatsApp hijau berkedip di halaman sukses checkout agar slot jadwal mereka resmi diamankan oleh admin.
 
 ---
 
-### 3. Solusi Loophole Pembayaran & Celah Pemesanan (Issue #7 Fixes)
+### 3. Role-Based Access Control (RBAC) & Manajemen Staf
+Sistem membatasi akses menu sidebar dan routing server-side berdasarkan 3 peran admin:
+1. **`SUPER_ADMIN`**: Akses tak terbatas ke seluruh sistem, termasuk halaman pengaturan Syarat & Ketentuan (S&K) dan halaman **Manajemen Admin** (`/admin/admins`) untuk mendaftarkan staf baru, mengubah peran, atau menonaktifkan akun admin.
+2. **`ADMIN_PESANAN`**: Hanya mengelola transaksi pemesanan (Booking, Kalender, Riwayat, Rekap).
+3. **`ADMIN_CMS`**: Hanya mengelola tampilan konten web publik (Galeri, Paket, Kategori, Testimoni, Pengaturan S&K).
 
+---
+
+### 4. Solusi Loophole Pembayaran & Celah Pemesanan (Issue #7 Fixes)
 Untuk mencegah pengguna memblokir slot kalender secara permanen tanpa membayar (karena status `PENDING` dianggap memblokir tanggal di repositori), sistem menerapkan mekanisme berikut:
 
 1. **Midtrans Connection Failure Handling**:
    * Di dalam [create-booking.use-case.ts](file:///d:/Project/seniman%20kamera/senimankamera/src/modules/booking/use-cases/create-booking.use-case.ts), jika API Midtrans gagal membuat token transaksi Snap, sistem akan langsung melempar error (`throw new Error`). Penulisan data booking ke database dibatalkan sepenuhnya untuk menghindari sampah entri `PENDING` tanpa token pembayaran.
 2. **Auto-Cancellation Sisi Klien**:
-   * Di dalam [booking-form.tsx](file:///d:/Project/seniman%20kamera/senimankamera/src/modules/booking/components/booking-form.tsx), callback `onClose` (pop-up pembayaran ditutup sengaja) dan `onError` (pembayaran ditolak/gagal) pada SDK Midtrans Snap akan langsung memicu pemanggilan server action `cancelPendingBookingAction(bookingId)`.
-   * Logika ini menghapus entri booking `PENDING` di database secara instan untuk melepaskan slot kalender.
-   * State formulir (React states) tetap dipertahankan, sehingga pengguna dapat langsung mengeklik ulang tombol konfirmasi untuk mencoba kembali dengan metode pembayaran lain.
+   * Di dalam [booking-form.tsx](file:///d:/Project/seniman%20kamera/senimankamera/src/modules/booking/components/booking-form.tsx), callback `onClose` (pop-up pembayaran ditutup sengaja) dan `onError` (pembayaran ditolak/gagal) pada SDK Midtrans Snap akan langsung memicu pemanggilan server action `cancelPendingBookingAction(bookingId)`. Logika ini menghapus entri booking `PENDING` di database secara instan untuk melepaskan slot kalender.
 3. **Pembersihan Otomatis Slot Yatim (Orphaned Slots)**:
    * Di dalam [booking.repository.ts](file:///d:/Project/seniman%20kamera/senimankamera/src/modules/booking/repositories/booking.repository.ts), helper `cleanupOrphanedTimeBasedSlots` akan memindai apakah masih ada booking aktif pada hari tersebut. Jika tidak ada lagi booking aktif yang tersisa setelah penghapusan (misal semua dibatalkan/dihapus), `CalendarSlot` bertipe `TIME_BASED_ACTIVE` pada tanggal tersebut akan dihapus secara transaksional di database untuk membebaskan tanggal tersebut sepenuhnya bagi kategori `DATE_ONLY`.
 
@@ -157,6 +170,7 @@ Untuk mencegah pengguna memblokir slot kalender secara permanen tanpa membayar (
 ## 🔐 Autentikasi & Proteksi Sesi
 
 * **Middleware**: Sesi masuk admin diproteksi oleh file middleware `middleware.ts` menggunakan `@supabase/ssr` (method `updateSession`).
+* **Server-Side Helper `enforceAdminRole`**: Semua rute di `/admin/*` dievaluasi di server sebelum render halaman untuk mencocokkan perizinan peran admin terdaftar di DB.
 * **Session Timeout Component**: Komponen global `SessionTimeout` memantau aktivitas mouse/keyboard admin. Jika tidak ada aktivitas setelah jangka waktu tertentu (default 30 menit), sesi admin akan otomatis di-logout dan diarahkan kembali ke `/login` untuk aspek keamanan data.
 
 ---
@@ -167,7 +181,7 @@ Jika Anda diminta untuk memodifikasi atau menambahkan fitur baru ke proyek ini, 
 
 1. **Selalu Gunakan Prisma Transaction**: Saat melakukan insert/update data yang memiliki relasi berantai (seperti `Booking` -> `CalendarSlot`), pastikan untuk membungkus operasi database dalam `prisma.$transaction(async (tx) => { ... })` agar data tetap konsisten.
 2. **Pertahankan Validasi Zod**: Selalu lakukan validasi Zod schema baik di sisi client (form) maupun di server (use case) sebelum memproses input apa pun.
-3. **Jangan Menyimpan Token Kunci (Secret) di Kode**: Semua konfigurasi (kunci API Midtrans, token Telegram, kredensial DB) harus selalu dibaca melalui `process.env`.
+3. **Jangan Menyimpan Token Kunci (Secret) di Kode**: Semua konfigurasi (kunci API Midtrans, token Telegram, kredensial DB, Supabase Service Role Key) harus selalu dibaca melalui `process.env`.
 4. **Verifikasi Build & TypeScript**: Sebelum melakukan commit atau serah terima tugas, selalu jalankan dua perintah berikut untuk memastikan tidak ada jenis error compile:
    ```bash
    npx tsc --noEmit
