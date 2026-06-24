@@ -2,11 +2,20 @@ import { createAdminClient } from "@/src/infrastructure/supabase/admin";
 import { CreateAdminInput, CreateAdminSchema } from "../schemas/create-admin.schema";
 import { adminProfileRepository } from "../repositories/admin-profile.repository";
 import { AdminProfile } from "@prisma/client";
+import { ZodError } from "zod";
 
 export class CreateAdminUseCase {
   async execute(input: CreateAdminInput): Promise<AdminProfile> {
     // 1. Validate schema
-    const validated = CreateAdminSchema.parse(input);
+    let validated: CreateAdminInput;
+    try {
+      validated = CreateAdminSchema.parse(input);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new Error(error.issues[0]?.message || "Input tidak valid.");
+      }
+      throw error;
+    }
 
     // 2. Check for duplicate email
     const existingEmail = await adminProfileRepository.findByEmail(validated.email);

@@ -137,7 +137,7 @@ export function PackageManager({ initialPackages, initialCategories }: PackageMa
 
     const sessionDurationNum = isTimeBased ? parseInt(sessionDuration, 10) : null;
     if (isTimeBased && (isNaN(sessionDurationNum!) || sessionDurationNum! <= 0)) {
-      setError("Durasi sesi wajib diisi dengan angka positif untuk kategori Multi-Sesi.");
+      setError("Durasi sesi wajib diisi dengan angka positif untuk kategori Per Jam.");
       return;
     }
 

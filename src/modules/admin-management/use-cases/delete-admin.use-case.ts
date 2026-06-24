@@ -2,7 +2,7 @@ import { createAdminClient } from "@/src/infrastructure/supabase/admin";
 import { adminProfileRepository } from "../repositories/admin-profile.repository";
 import { AdminProfile } from "@prisma/client";
 
-export class DeactivateAdminUseCase {
+export class DeleteAdminUseCase {
   async execute(id: string, currentAdminSupabaseId: string): Promise<AdminProfile> {
     const allProfiles = await adminProfileRepository.findAll();
     const target = allProfiles.find((p) => p.id === id);
@@ -11,19 +11,12 @@ export class DeactivateAdminUseCase {
       throw new Error("Admin tidak ditemukan.");
     }
 
-    if (target.role === "SUPER_ADMIN") {
-      const activeSuperAdmins = allProfiles.filter(
-        (p) => p.role === "SUPER_ADMIN" && p.isActive && p.id !== id
-      );
-      if (activeSuperAdmins.length === 0) {
-        throw new Error(
-          "Tidak dapat menonaktifkan satu-satunya Super Admin aktif yang tersisa."
-        );
-      }
+    if (target.supabaseId === currentAdminSupabaseId) {
+      throw new Error("Anda tidak dapat menghapus akun Anda sendiri.");
     }
 
-    if (target.supabaseId === currentAdminSupabaseId) {
-      throw new Error("Anda tidak dapat menonaktifkan akun Anda sendiri.");
+    if (target.isActive) {
+      throw new Error("Akun admin harus dinonaktifkan terlebih dahulu sebelum dapat dihapus.");
     }
 
     const supabaseAdmin = createAdminClient();
@@ -31,13 +24,13 @@ export class DeactivateAdminUseCase {
     // Hapus user di Supabase Auth agar tidak bisa login lagi
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(target.supabaseId);
     if (authError) {
-      // Jika user tidak ditemukan di Supabase Auth, lanjutkan penonaktifan di DB
+      // Jika user tidak ditemukan di Supabase Auth atau gagal, log peringatan tapi tetap hapus dari database
       console.warn("Peringatan: User Supabase Auth tidak ditemukan atau gagal dihapus:", authError.message);
     }
 
-    // Set status di DB menjadi tidak aktif
-    return adminProfileRepository.setActive(id, false);
+    // Hapus data secara permanen dari database
+    return adminProfileRepository.delete(id);
   }
 }
 
-export const deactivateAdminUseCase = new DeactivateAdminUseCase();
+export const deleteAdminUseCase = new DeleteAdminUseCase();

@@ -164,7 +164,7 @@ export function StepPilihPaket({
                         ? "bg-primary-foreground text-primary border-primary-foreground" 
                         : "bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-900/30"
                     )}>
-                      Multi-Sesi
+                      Per Jam
                     </span>
                   )}
                 </h3>

@@ -9,6 +9,7 @@ import { Trash2, Plus, Edit2, AlertCircle, Tag, Settings, X, ArrowUpDown } from 
 import { Button } from "@/components/ui/button";
 import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface CategoryItem {
   id: string;
@@ -28,8 +29,13 @@ interface CategoryManagerProps {
 
 export function CategoryManager({ initialCategories }: CategoryManagerProps) {
   const [categories, setCategories] = useState<CategoryItem[]>(initialCategories);
+  const [filterBookingType, setFilterBookingType] = useState<string>("ALL");
   const [isPending, startTransition] = useTransition();
   const { alert, confirm } = useModal();
+
+  const filteredCategories = filterBookingType === "ALL"
+    ? categories
+    : categories.filter((cat) => cat.bookingType === filterBookingType);
 
   // Form States
   const [editId, setEditId] = useState<string | null>(null);
@@ -237,7 +243,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                   className="w-full px-3 py-2 bg-transparent border border-border/40 focus:border-primary focus:outline-none rounded-none text-primary"
                 >
                   <option value="DATE_ONLY" className="bg-card text-primary">Satu Booking per Tanggal (DATE_ONLY)</option>
-                  <option value="TIME_BASED" className="bg-card text-primary">Banyak Booking per Tanggal / Multi-Sesi (TIME_BASED)</option>
+                  <option value="TIME_BASED" className="bg-card text-primary">Banyak Booking per Tanggal / Per Jam (TIME_BASED)</option>
                 </select>
                 <p className="text-[10px] text-secondary/60">
                   DATE_ONLY untuk kategori seperti Wedding. TIME_BASED untuk Graduasi/Studio.
@@ -300,9 +306,60 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
 
             {/* List Column (Right Panel) */}
             <div className="lg:col-span-8 border border-border/40 bg-card p-6 rounded-none space-y-6">
-              <h3 className="font-serif text-lg text-primary font-semibold flex items-center gap-2 pb-3 border-b border-border/20">
-                <Settings className="w-4 h-4" /> Kategori Terdaftar ({categories.length})
+              <h3 className="font-serif text-lg text-primary font-semibold flex items-center justify-between pb-3 border-b border-border/20">
+                <span className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" /> Kategori Terdaftar
+                </span>
+                <span className="font-sans text-xs text-secondary font-light">
+                  Menampilkan {filteredCategories.length} dari {categories.length} kategori
+                </span>
               </h3>
+
+              {/* Booking Type Filter Tab Bar */}
+              <div className="flex flex-wrap gap-1.5 pb-2">
+                <Button
+                  key="ALL"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFilterBookingType("ALL")}
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider rounded-none transition-all duration-200 h-8 px-3 cursor-pointer",
+                    filterBookingType === "ALL"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent text-secondary hover:text-primary hover:border-primary/50"
+                  )}
+                >
+                  Semua
+                </Button>
+                <Button
+                  key="DATE_ONLY"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFilterBookingType("DATE_ONLY")}
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider rounded-none transition-all duration-200 h-8 px-3 cursor-pointer",
+                    filterBookingType === "DATE_ONLY"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent text-secondary hover:text-primary hover:border-primary/50"
+                  )}
+                >
+                  Harian (DATE_ONLY)
+                </Button>
+                <Button
+                  key="TIME_BASED"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFilterBookingType("TIME_BASED")}
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider rounded-none transition-all duration-200 h-8 px-3 cursor-pointer",
+                    filterBookingType === "TIME_BASED"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent text-secondary hover:text-primary hover:border-primary/50"
+                  )}
+                >
+                  Per Jam (TIME_BASED)
+                </Button>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse font-sans text-xs">
@@ -318,7 +375,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {categories.map((cat) => (
+                    {filteredCategories.map((cat) => (
                       <tr
                         key={cat.id}
                         className={`border-b border-border/20 last:border-0 hover:bg-muted/30 transition-colors ${
@@ -339,7 +396,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                               ? "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300"
                               : "bg-neutral-100 dark:bg-neutral-800/40 text-secondary"
                           }`}>
-                            {cat.bookingType === "TIME_BASED" ? "Multi-Sesi" : "Harian"}
+                            {cat.bookingType === "TIME_BASED" ? "Per Jam" : "Harian"}
                           </span>
                         </td>
                         <td className="py-4 pr-4 text-secondary hidden md:table-cell max-w-[250px] truncate">
@@ -371,10 +428,10 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                         </td>
                       </tr>
                     ))}
-                    {categories.length === 0 && (
+                    {filteredCategories.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="text-center py-16 text-secondary italic">
-                          Belum ada kategori terdaftar.
+                        <td colSpan={7} className="text-center py-16 text-secondary italic">
+                          Tidak ada kategori terdaftar yang cocok dengan filter.
                         </td>
                       </tr>
                     )}

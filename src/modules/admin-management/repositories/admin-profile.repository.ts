@@ -68,6 +68,12 @@ export class AdminProfileRepository {
       data: { isActive },
     });
   }
+
+  async delete(id: string): Promise<AdminProfile> {
+    return prisma.adminProfile.delete({
+      where: { id },
+    });
+  }
 }
 
 export const adminProfileRepository = new AdminProfileRepository();

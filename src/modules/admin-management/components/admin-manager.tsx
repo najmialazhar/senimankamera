@@ -12,6 +12,10 @@ import {
   UserX,
   UserCheck,
   ShieldAlert,
+  Trash2,
+  Eye,
+  EyeOff,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -21,6 +25,7 @@ import { useModal } from "@/components/modal-provider";
 import { createAdminAction } from "@/src/modules/admin-management/actions/create-admin.action";
 import { updateAdminRoleAction } from "@/src/modules/admin-management/actions/update-admin-role.action";
 import { deactivateAdminAction } from "@/src/modules/admin-management/actions/deactivate-admin.action";
+import { deleteAdminAction } from "@/src/modules/admin-management/actions/delete-admin.action";
 
 interface AdminManagerProps {
   admins?: any[];
@@ -43,11 +48,19 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
     email: "",
     username: "",
     password: "",
+    confirmPassword: "",
     role: "ADMIN_PESANAN",
   });
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [adminError, setAdminError] = useState<string | null>(null);
   const [isAdminPending, startAdminTransition] = useTransition();
+
+  // State untuk konfirmasi hapus permanen admin
+  const [deleteConfirmAdmin, setDeleteConfirmAdmin] = useState<any | null>(null);
+  const [deleteConfirmUsername, setDeleteConfirmUsername] = useState<string>("");
+  const [deleteConfirmError, setDeleteConfirmError] = useState<string | null>(null);
 
   const { alert, confirm } = useModal();
 
@@ -63,6 +76,11 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminError(null);
+
+    if (!isEditMode && adminForm.password !== adminForm.confirmPassword) {
+      setAdminError("Konfirmasi password tidak cocok.");
+      return;
+    }
 
     startAdminTransition(async () => {
       if (isEditMode) {
@@ -105,9 +123,11 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
       email: "",
       username: "",
       password: "",
+      confirmPassword: "",
       role: "ADMIN_PESANAN",
     });
     setIsEditMode(false);
+    setShowPassword(false);
     setAdminError(null);
   };
 
@@ -118,6 +138,7 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
       email: admin.email,
       username: admin.username,
       password: "", // password kosong di mode edit
+      confirmPassword: "",
       role: admin.role,
     });
     setIsEditMode(true);
@@ -126,7 +147,7 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
 
   const handleDeactivateAdmin = async (admin: any) => {
     const isConfirmed = await confirm(
-      `Apakah Anda yakin ingin menonaktifkan admin ${admin.name}? Akun ini akan dihapus dari sistem login.`
+      `Apakah Anda yakin ingin menonaktifkan admin ${admin.name}? Akun ini tidak akan bisa diaktifkan kembali kecuali Anda menghapusnya secara permanen dan membuat akun baru dengan kredensial yang sama.`
     );
     if (!isConfirmed) return;
 
@@ -142,6 +163,39 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
       }
     });
   };
+
+  const handleDeleteAdminClick = (admin: any) => {
+    setDeleteConfirmAdmin(admin);
+    setDeleteConfirmUsername("");
+    setDeleteConfirmError(null);
+  };
+
+  const confirmDeleteAdmin = async () => {
+    if (!deleteConfirmAdmin) return;
+
+    if (deleteConfirmUsername !== deleteConfirmAdmin.username) {
+      setDeleteConfirmError("Username yang Anda masukkan tidak cocok.");
+      return;
+    }
+
+    startAdminTransition(async () => {
+      const res = await deleteAdminAction(deleteConfirmAdmin.id);
+      if (res.success) {
+        setAdminList((prev) => prev.filter((a) => a.id !== deleteConfirmAdmin.id));
+        toast.success("Akun admin berhasil dihapus secara permanen!");
+        setDeleteConfirmAdmin(null);
+        setDeleteConfirmUsername("");
+        setDeleteConfirmError(null);
+      } else {
+        setDeleteConfirmError(res.error || "Gagal menghapus admin.");
+      }
+    });
+  };
+
+  const filteredAdminList = adminList.filter((admin) => {
+    if (roleFilter === "ALL") return true;
+    return admin.role === roleFilter;
+  });
 
   return (
     <SidebarProvider>
@@ -246,20 +300,50 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
 
               {/* Password (Hanya di mode create) */}
               {!isEditMode && (
-                <div className="space-y-1.5">
-                  <label className="uppercase tracking-wider text-secondary font-bold block">
-                    Password (min 8 karakter)
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={adminForm.password}
-                    onChange={handleAdminFormChange}
-                    placeholder="********"
-                    className="w-full px-3 py-2 bg-transparent border border-border/40 focus:border-primary focus:outline-none rounded-none text-primary"
-                    required
-                  />
-                </div>
+                <>
+                  <div className="space-y-1.5">
+                    <label className="uppercase tracking-wider text-secondary font-bold block">
+                      Password (min 8 karakter)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={adminForm.password}
+                        onChange={handleAdminFormChange}
+                        placeholder="********"
+                        className="w-full pl-3 pr-10 py-2 bg-transparent border border-border/40 focus:border-primary focus:outline-none rounded-none text-primary font-sans text-xs"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-secondary hover:text-primary cursor-pointer focus:outline-none"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="uppercase tracking-wider text-secondary font-bold block">
+                      Konfirmasi Password
+                    </label>
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={adminForm.confirmPassword || ""}
+                      onChange={handleAdminFormChange}
+                      placeholder="********"
+                      className="w-full px-3 py-2 bg-transparent border border-border/40 focus:border-primary focus:outline-none rounded-none text-primary"
+                      required
+                    />
+                  </div>
+                </>
               )}
 
               {/* Peran / Role */}
@@ -297,9 +381,26 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
 
             {/* Table Side */}
             <div className="lg:col-span-8 border border-border/40 bg-card p-6 space-y-4 rounded-none font-sans text-xs">
-              <h3 className="font-serif text-lg text-primary pb-3 border-b border-border/20 uppercase tracking-wider text-xs">
-                Daftar Admin Terdaftar
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border/20">
+                <h3 className="font-serif text-lg text-primary uppercase tracking-wider text-xs">
+                  Daftar Admin Terdaftar
+                </h3>
+                <div className="flex items-center gap-2">
+                  <label className="text-secondary font-bold uppercase tracking-wider text-[10px] whitespace-nowrap">
+                    Filter Peran:
+                  </label>
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-2 py-1 bg-background border border-border/40 focus:border-primary focus:outline-none rounded-none text-primary text-[11px]"
+                  >
+                    <option value="ALL">Semua Peran</option>
+                    <option value="SUPER_ADMIN">Super Admin</option>
+                    <option value="ADMIN_PESANAN">Admin Pesanan</option>
+                    <option value="ADMIN_CMS">Admin CMS</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left font-sans text-xs">
@@ -313,14 +414,14 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20 text-primary">
-                    {adminList.length === 0 ? (
+                    {filteredAdminList.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-secondary font-light">
-                          Tidak ada admin terdaftar.
+                          Tidak ada admin terdaftar yang cocok dengan filter.
                         </td>
                       </tr>
                     ) : (
-                      adminList.map((admin) => (
+                      filteredAdminList.map((admin) => (
                         <tr key={admin.id} className="hover:bg-muted/10 transition-colors">
                           <td className="py-4 px-2 font-bold">{admin.name}</td>
                           <td className="py-4 px-2">
@@ -363,7 +464,10 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
                                 variant="ghost"
                                 size="icon"
                                 title="Ubah Peran"
-                                disabled={admin.supabaseId === currentAdmin?.supabaseId}
+                                disabled={
+                                  !admin.isActive ||
+                                  admin.supabaseId === currentAdmin?.supabaseId
+                                }
                                 onClick={() => handleEditAdminClick(admin)}
                                 className="h-8 w-8 text-secondary hover:text-primary cursor-pointer disabled:opacity-40"
                               >
@@ -378,7 +482,6 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
                                   size="icon"
                                   title="Nonaktifkan Admin"
                                   disabled={
-                                    admin.role === "SUPER_ADMIN" ||
                                     admin.supabaseId === currentAdmin?.supabaseId
                                   }
                                   onClick={() => handleDeactivateAdmin(admin)}
@@ -387,10 +490,30 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
                                   <UserX className="w-3.5 h-3.5" />
                                 </Button>
                               ) : (
-                                <div className="h-8 w-8 flex items-center justify-center text-secondary/40">
+                                <div className="h-8 w-8 flex items-center justify-center text-secondary/40" title="Admin sudah dinonaktifkan">
                                   <UserCheck className="w-3.5 h-3.5 opacity-30" />
                                 </div>
                               )}
+
+                              {/* Delete Button */}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                title={
+                                  admin.isActive
+                                    ? "Nonaktifkan admin terlebih dahulu untuk menghapus"
+                                    : "Hapus Admin Permanen"
+                                }
+                                disabled={
+                                  admin.isActive ||
+                                  admin.supabaseId === currentAdmin?.supabaseId
+                                }
+                                onClick={() => handleDeleteAdminClick(admin)}
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/10 cursor-pointer disabled:opacity-40"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -408,10 +531,160 @@ export function AdminManager({ admins = [], currentAdmin }: AdminManagerProps) {
                   Akun dengan peran <b>Super Admin</b> tidak dapat dinonaktifkan. Anda tidak dapat mengubah peran atau menonaktifkan akun Anda sendiri yang sedang aktif untuk menghindari lockout.
                 </div>
               </div>
+
+              {/* Deskripsi Hak Akses Peran */}
+              <div className="pt-5 border-t border-border/20 space-y-3">
+                <h4 className="font-serif text-xs text-primary uppercase tracking-wider font-bold">
+                  Matriks Hak Akses Peran (Role Permissions)
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-center font-sans text-[10px] border border-border/20 border-collapse">
+                    <thead>
+                      <tr className="bg-muted/10 border-b border-border/20 uppercase tracking-wider text-secondary font-bold text-left">
+                        <th className="py-2.5 px-3 border-r border-border/20 w-[130px]">Peran</th>
+                        <th className="py-2.5 px-3 border-r border-border/20 text-center">Manajemen Admin</th>
+                        <th className="py-2.5 px-3 border-r border-border/20 text-center">Jadwal & Pesanan</th>
+                        <th className="py-2.5 px-3 border-r border-border/20 text-center">Manajemen Konten (CMS)</th>
+                        <th className="py-2.5 px-3 text-center">Pengaturan Situs</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20 text-primary">
+                      <tr className="hover:bg-muted/5 transition-colors">
+                        <td className="py-3 px-2.5 font-bold border-r border-border/20 text-left">
+                          <span className="text-purple-700 dark:text-purple-400 font-sans text-[9px] font-bold uppercase tracking-widest bg-purple-50 dark:bg-purple-950/20 px-1.5 py-0.5 border border-purple-200 dark:border-purple-800 rounded-sm">
+                            Super Admin
+                          </span>
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5">
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-muted/5 transition-colors">
+                        <td className="py-3 px-2.5 font-bold border-r border-border/20 text-left">
+                          <span className="text-blue-700 dark:text-blue-400 font-sans text-[9px] font-bold uppercase tracking-widest bg-blue-50 dark:bg-blue-950/20 px-1.5 py-0.5 border border-blue-200 dark:border-blue-800 rounded-sm">
+                            Admin Pesanan
+                          </span>
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <X className="w-4 h-4 text-red-600 dark:text-red-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <X className="w-4 h-4 text-red-600 dark:text-red-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5">
+                          <X className="w-4 h-4 text-red-600 dark:text-red-400 mx-auto" />
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-muted/5 transition-colors">
+                        <td className="py-3 px-2.5 font-bold border-r border-border/20 text-left">
+                          <span className="text-emerald-700 dark:text-emerald-400 font-sans text-[9px] font-bold uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/20 px-1.5 py-0.5 border border-emerald-200 dark:border-emerald-800 rounded-sm">
+                            Admin CMS
+                          </span>
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <X className="w-4 h-4 text-red-600 dark:text-red-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <X className="w-4 h-4 text-red-600 dark:text-red-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5 border-r border-border/20">
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                        </td>
+                        <td className="py-3 px-2.5">
+                          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </SidebarInset>
+
+      {/* Modal Konfirmasi Hapus Permanen */}
+      {deleteConfirmAdmin && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity animate-[fadeIn_0.2s_ease-out]" 
+            onClick={() => {
+              setDeleteConfirmAdmin(null);
+              setDeleteConfirmUsername("");
+              setDeleteConfirmError(null);
+            }}
+          />
+          
+          {/* Modal Content */}
+          <div className="bg-card border border-border/40 text-foreground max-w-sm w-full p-8 relative z-10 rounded-none shadow-2xl flex flex-col space-y-6 animate-[scaleIn_0.2s_ease-out] font-sans text-xs">
+            <div className="space-y-2">
+              <span className="font-sans text-[9px] uppercase tracking-widest text-red-600 font-bold block">
+                Konfirmasi Penghapusan Permanen
+              </span>
+              <h3 className="font-serif text-lg font-medium text-primary leading-tight animate-[pulse_2s_infinite]">
+                Hapus Akun @{deleteConfirmAdmin.username}?
+              </h3>
+              <p className="text-secondary font-light leading-relaxed">
+                Tindakan ini akan menghapus akun admin <strong>{deleteConfirmAdmin.name}</strong> secara permanen dari database dan sistem login Supabase. Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <p className="text-secondary font-light leading-relaxed">
+                Untuk memverifikasi, silakan ketik username <strong>{deleteConfirmAdmin.username}</strong> di bawah ini:
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={deleteConfirmUsername}
+                onChange={(e) => {
+                  setDeleteConfirmUsername(e.target.value);
+                  setDeleteConfirmError(null);
+                }}
+                placeholder="Ketik username untuk konfirmasi"
+                className="w-full px-3 py-2 bg-transparent border border-border/40 focus:border-red-600 focus:outline-none rounded-none text-primary"
+              />
+              {deleteConfirmError && (
+                <p className="text-red-600 text-[10px]">{deleteConfirmError}</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmAdmin(null);
+                  setDeleteConfirmUsername("");
+                  setDeleteConfirmError(null);
+                }}
+                className="px-4 py-2.5 bg-transparent border border-border hover:bg-neutral-100 dark:hover:bg-neutral-900 text-primary font-sans text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-none"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteAdmin}
+                disabled={isAdminPending || deleteConfirmUsername !== deleteConfirmAdmin.username}
+                className="px-5 py-2.5 bg-red-600 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-sans text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer rounded-none"
+              >
+                {isAdminPending ? "Menghapus..." : "Hapus Permanen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </SidebarProvider>
   );
 }

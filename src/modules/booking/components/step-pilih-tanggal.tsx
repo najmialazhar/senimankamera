@@ -384,7 +384,7 @@ export function StepPilihTanggal({
                     "text-[11px] font-medium",
                     isDateOnlyConflict ? "text-amber-600 font-bold" : "text-green-600"
                   )}>
-                    Status: {isDateOnlyConflict ? "Jadwal Terisi (Penuh)" : `Tanggal Tersedia ${bookingType === "TIME_BASED" ? "(Multi-Sesi)" : ""}`}
+                    Status: {isDateOnlyConflict ? "Jadwal Terisi (Penuh)" : `Tanggal Tersedia ${bookingType === "TIME_BASED" ? "(Per Jam)" : ""}`}
                   </div>
                 )}
               </div>

@@ -175,6 +175,28 @@ export class BookingRepository {
     return count > 0;
   }
 
+  async isDateOccupiedForFullDay(date: Date): Promise<boolean> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const count = await prisma.calendarSlot.count({
+      where: {
+        date: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+        status: {
+          in: ["PENDING", "APPROVED", "LUNAS", "ManualBooking", "ManualBlock", "TIME_BASED_ACTIVE"],
+        },
+      },
+    });
+
+    return count > 0;
+  }
+
   async getBookedDates(): Promise<Date[]> {
     const slots = await prisma.calendarSlot.findMany({
       where: {

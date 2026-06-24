@@ -75,8 +75,8 @@ export class CreateBookingUseCase {
     let calculatedEndTime: string | undefined = undefined;
 
     if (bookingType === "DATE_ONLY") {
-      // Check if the date is already booked or blocked
-      const isBooked = await this.bookingRepository.isDateBooked(bookingDate);
+      // Check if the date is already booked or blocked (including TIME_BASED_ACTIVE)
+      const isBooked = await this.bookingRepository.isDateOccupiedForFullDay(bookingDate);
       if (isBooked) {
         throw new Error("Tanggal yang Anda pilih sudah dibooking. Silakan pilih tanggal lain.");
       }
