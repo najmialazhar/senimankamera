@@ -158,6 +158,34 @@ model BookingDraft {
   createdAt        DateTime @default(now())
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN_PESANAN
+  ADMIN_CMS
+}
+
+model AdminProfile {
+  id         String    @id @default(uuid())
+  supabaseId String    @unique // UUID dari Supabase Auth
+  name       String
+  email      String    @unique
+  username   String    @unique // Untuk opsi login menggunakan username
+  role       AdminRole @default(ADMIN_PESANAN)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model OtpToken {
+  id        String   @id @default(uuid())
+  email     String   // email target reset password
+  token     String   @unique  // 6-digit OTP
+  expiresAt DateTime // OTP valid dalam waktu 5 menit
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+
 
 
 

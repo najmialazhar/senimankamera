@@ -9,14 +9,11 @@ import { prisma } from "@/src/infrastructure/prisma/client";
 
 export const revalidate = 0;
 
-export default async function AdminCalendarPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+import { enforceAdminRole } from "@/src/modules/auth/services/auth.service";
+import { AdminRole } from "@prisma/client";
 
-  // Auth check
-  if (!user) {
-    redirect("/login");
-  }
+export default async function AdminCalendarPage() {
+  const admin = await enforceAdminRole([AdminRole.SUPER_ADMIN, AdminRole.ADMIN_PESANAN]);
 
   const calendarRepository = new CalendarRepository();
   const packageRepository = new PackageRepository();

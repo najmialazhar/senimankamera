@@ -7,14 +7,11 @@ import { RecapClient } from "./recap-client";
 
 export const revalidate = 0;
 
-export default async function AdminRecapPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+import { enforceAdminRole } from "@/src/modules/auth/services/auth.service";
+import { AdminRole } from "@prisma/client";
 
-  // Auth check
-  if (!user) {
-    redirect("/login");
-  }
+export default async function AdminRecapPage() {
+  const admin = await enforceAdminRole([AdminRole.SUPER_ADMIN, AdminRole.ADMIN_PESANAN]);
 
   const bookingRepository = new BookingRepository();
   const rawBookings = await bookingRepository.getRecapData();

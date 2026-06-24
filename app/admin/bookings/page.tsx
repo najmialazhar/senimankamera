@@ -7,6 +7,9 @@ import { BookingsClient } from "./bookings-client";
 
 export const revalidate = 0;
 
+import { enforceAdminRole } from "@/src/modules/auth/services/auth.service";
+import { AdminRole } from "@prisma/client";
+
 export default async function AdminBookingsPage({
   searchParams,
 }: {
@@ -15,13 +18,7 @@ export default async function AdminBookingsPage({
   const resolvedParams = searchParams ? (typeof searchParams.then === 'function' ? await searchParams : searchParams) : {};
   const initialStatusFilter = resolvedParams.status || "";
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Auth check
-  if (!user) {
-    redirect("/login");
-  }
+  const admin = await enforceAdminRole([AdminRole.SUPER_ADMIN, AdminRole.ADMIN_PESANAN]);
 
   const bookingRepository = new BookingRepository();
   const rawBookings = await bookingRepository.findAllBookings({});

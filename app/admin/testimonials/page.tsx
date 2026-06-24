@@ -5,13 +5,11 @@ import { createClient } from "@/src/infrastructure/supabase/server";
 
 export const revalidate = 0;
 
-export default async function AdminTestimonialsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+import { enforceAdminRole } from "@/src/modules/auth/services/auth.service";
+import { AdminRole } from "@prisma/client";
 
-  if (!user) {
-    redirect("/login");
-  }
+export default async function AdminTestimonialsPage() {
+  const admin = await enforceAdminRole([AdminRole.SUPER_ADMIN, AdminRole.ADMIN_CMS]);
 
   const repo = new TestimonialRepository();
   const testimonials = await repo.findAll();

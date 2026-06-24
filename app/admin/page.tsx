@@ -67,14 +67,10 @@ function getStatusLabel(status: string) {
   }
 }
 
-export default async function AdminPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+import { getCurrentAdmin } from "@/src/modules/auth/services/auth.service";
 
-  // Server-side auth check
-  if (!user) {
-    redirect("/login");
-  }
+export default async function AdminPage() {
+  const admin = await getCurrentAdmin();
 
   const repository = new BookingRepository();
 

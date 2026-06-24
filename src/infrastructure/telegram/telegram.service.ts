@@ -155,5 +155,51 @@ Silahkan cek di Admin Dashboard di senimankamera.vercel.app/login
       console.error("TelegramStatusNotification Error:", error);
     }
   }
+
+  async sendOtpMessage(data: { otp: string; name: string; email: string; username: string }) {
+    if (!this.token || !this.chatId) {
+      console.log("Skipping Telegram notification because bot token or chat ID is not configured.");
+      return;
+    }
+
+    const message = `
+🔐 <b>PERMINTAAN RESET PASSWORD</b> 🔐
+----------------------------------
+👤 <b>Nama Admin:</b> ${data.name}
+📧 <b>Email:</b> ${data.email}
+👤 <b>Username:</b> ${data.username}
+----------------------------------
+🔑 <b>KODE OTP:</b> <code>${data.otp}</code>
+⏱️ <b>Berlaku:</b> 5 Menit
+
+<i>Mohon jangan berikan kode OTP ini kepada siapapun.</i>
+`;
+
+    const url = `https://api.telegram.org/bot${this.token}/sendMessage`;
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: this.chatId,
+          text: message,
+          parse_mode: "HTML",
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Failed to send Telegram OTP message:", errText);
+      } else {
+        console.log("Telegram OTP message sent successfully!");
+      }
+    } catch (error) {
+      console.error("Telegram OTP message Error:", error);
+    }
+  }
 }
+
 

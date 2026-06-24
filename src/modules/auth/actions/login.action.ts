@@ -3,15 +3,28 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/src/infrastructure/supabase/server";
 
+import { adminProfileRepository } from "@/src/modules/admin-management/repositories/admin-profile.repository";
+
 export async function loginAction(prevState: any, formData: FormData) {
   try {
-    const email = formData.get("email")?.toString();
+    const identifier = formData.get("email")?.toString()?.trim();
     const password = formData.get("password")?.toString();
 
     // Simple validation
-    if (!email || !password) {
-      return { error: "Email and password are required." };
+    if (!identifier || !password) {
+      return { error: "Email/username dan password wajib diisi." };
     }
+
+    // Resolve email if a username was entered
+    let email = identifier;
+    const profile = await adminProfileRepository.findByUsernameOrEmail(identifier);
+    if (!profile) {
+      return { error: "Email atau username tidak terdaftar." };
+    }
+    if (!profile.isActive) {
+      return { error: "Akun Anda telah dinonaktifkan." };
+    }
+    email = profile.email;
 
     const supabase = await createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -20,6 +33,10 @@ export async function loginAction(prevState: any, formData: FormData) {
     });
 
     if (error) {
+      // Jika errornya dari Supabase Auth, tampilkan pesan error
+      if (error.message === "Invalid login credentials") {
+        return { error: "Email/username atau password salah." };
+      }
       return { error: error.message };
     }
   } catch (error: any) {
@@ -32,6 +49,7 @@ export async function loginAction(prevState: any, formData: FormData) {
 
   redirect("/admin");
 }
+
 
 export async function logoutAction() {
   const supabase = await createClient();

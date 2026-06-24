@@ -10,14 +10,11 @@ import { Booking, Package, Category, Client } from "@prisma/client";
 
 export const revalidate = 0;
 
-export default async function AdminHistoryPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+import { enforceAdminRole } from "@/src/modules/auth/services/auth.service";
+import { AdminRole } from "@prisma/client";
 
-  // Auth check
-  if (!user) {
-    redirect("/login");
-  }
+export default async function AdminHistoryPage() {
+  const admin = await enforceAdminRole([AdminRole.SUPER_ADMIN, AdminRole.ADMIN_PESANAN]);
 
   const bookingRepository = new BookingRepository();
   const packageRepository = new PackageRepository();
