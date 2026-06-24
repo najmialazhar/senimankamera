@@ -104,7 +104,7 @@ export function LoginForm({
           <KeyRound className="w-10 h-10 text-primary mb-2" />
           <h1 className="font-serif text-3xl font-medium tracking-tight">Reset Kata Sandi</h1>
           <p className="font-sans text-xs text-secondary tracking-wide uppercase">
-            OTP akan dikirim ke Grup Telegram terdaftar
+            OTP akan dikirim ke Grup Telegram Seniman Kamera Order Info
           </p>
         </div>
 
