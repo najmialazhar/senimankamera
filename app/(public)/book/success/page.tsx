@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getBookingByIdAction } from "@/src/modules/booking/actions/get-booking-by-id.action";
 import { BookingSuccessView } from "@/src/modules/booking/components/booking-success-view";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const revalidate = 0; // Dynamic route
@@ -19,6 +19,25 @@ export default async function BookingSuccessPage({ searchParams }: BookingSucces
   }
 
   const result = await getBookingByIdAction(orderId);
+
+  if (result.isPendingWebhook) {
+    return (
+      <div className="w-full max-w-[1440px] mx-auto px-6 md:px-20 py-20 flex flex-col items-center justify-center min-h-[50vh]">
+        <div className="w-full max-w-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/30 p-8 text-center flex flex-col items-center">
+          <Loader2 className="w-12 h-12 text-amber-700 dark:text-amber-400 mb-4 animate-spin" />
+          <h2 className="font-serif text-2xl text-amber-900 dark:text-amber-300 mb-2 font-medium">Memverifikasi Pembayaran</h2>
+          <p className="font-sans text-xs text-amber-700 dark:text-amber-400 font-light mb-6 leading-relaxed">
+            {result.error}
+          </p>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `setTimeout(() => window.location.reload(), 3000);`
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!result.success || !result.data) {
     return (

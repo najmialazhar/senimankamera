@@ -84,13 +84,7 @@ export class MidtransService {
       };
     } catch (error) {
       console.error("Failed to create Midtrans Snap transaction:", error);
-      // Fallback/Mock behavior in case network or credentials fail, ensuring smooth manual testing
-      const mockToken = `mock-snap-token-${Date.now()}`;
-      const domain = this.isSandbox ? "app.sandbox.midtrans.com" : "app.midtrans.com";
-      return {
-        token: mockToken,
-        redirectUrl: `https://${domain}/snap/v2/vtweb/${mockToken}`,
-      };
+      throw error;
     }
   }
 }

@@ -2,10 +2,10 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { createBookingAction } from "../actions/create-booking.action";
+import { initiateDraftBookingAction } from "../actions/initiate-draft-booking.action";
 import { getBookedDatesWithInfoAction } from "../actions/get-booked-dates-with-info.action";
-import { cancelPendingBookingAction } from "../actions/cancel-pending-booking.action";
-import { CreateBookingSchema } from "../schemas/create-booking.schema";
+import { cancelDraftBookingAction } from "../actions/cancel-draft-booking.action";
+import { InitiateBookingDraftSchema } from "../schemas/booking-draft.schema";
 import { AlertCircle, Check, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -185,7 +185,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
 
     setServerError(null);
     startTransition(async () => {
-      const response = await cancelPendingBookingAction(createdBooking.id);
+      const response = await cancelDraftBookingAction(createdBooking.id);
       if (response.success) {
         setActiveSnapToken("");
         setActiveSnapUrl("");
@@ -198,7 +198,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
 
   const cancelAndClearBooking = (bookingId: string) => {
     startTransition(async () => {
-      const response = await cancelPendingBookingAction(bookingId);
+      const response = await cancelDraftBookingAction(bookingId);
       if (response.success) {
         setActiveSnapToken("");
         setActiveSnapUrl("");
@@ -291,7 +291,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     };
 
     // Client-side validation using Zod
-    const validation = CreateBookingSchema.safeParse(formData);
+    const validation = InitiateBookingDraftSchema.safeParse(formData);
     if (!validation.success) {
       setServerError(
         validation.error.issues[0]?.message || "Gagal memvalidasi formulir."
@@ -300,7 +300,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     }
 
     startTransition(async () => {
-      const response = await createBookingAction(validation.data);
+      const response = await initiateDraftBookingAction(validation.data);
       if (response.success && response.data) {
         const bookingData = response.data;
         const snapToken = bookingData.snapToken;

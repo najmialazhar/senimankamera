@@ -1,5 +1,6 @@
 import crypto from "crypto";
-import { BookingRepository } from "@/src/modules/booking/repositories/booking.repository";
+import { BookingDraftRepository } from "@/src/modules/booking/repositories/booking-draft.repository";
+import { ConfirmBookingFromDraftUseCase } from "@/src/modules/booking/use-cases/confirm-booking-from-draft.use-case";
 import { TelegramService } from "@/src/infrastructure/telegram/telegram.service";
 import { prisma } from "@/src/infrastructure/prisma/client";
 
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
 
     console.log(`Processing Midtrans webhook for Order ID: ${order_id}, Status: ${transaction_status}`);
 
-    const bookingRepository = new BookingRepository();
+    const bookingDraftRepository = new BookingDraftRepository();
 
     const isPaid =
       transaction_status === "settlement" ||
@@ -42,31 +43,12 @@ export async function POST(request: Request) {
       transaction_status === "expire";
 
     if (isPaid) {
-      // Fetch booking with client & package info for Telegram notification
-      const booking = await bookingRepository.findBookingById(order_id);
+      const confirmUseCase = new ConfirmBookingFromDraftUseCase(bookingDraftRepository);
+      const booking = await confirmUseCase.execute(order_id);
       if (!booking) {
-        console.error(`Booking not found for Order ID: ${order_id}`);
-        return Response.json({ success: false, error: "Booking not found" }, { status: 404 });
+        console.warn(`Booking draft not found or already confirmed for Order ID: ${order_id}`);
+        return Response.json({ success: true, message: "Draft not found or already confirmed" });
       }
-
-      // Record DP payment transaction (idempotent via upsert)
-      const dpAmount = booking.dpAmount ?? (booking.totalAmount ?? 0) * 0.2;
-      await prisma.paymentTransaction.upsert({
-        where: { uniqueKey: `${booking.id}-DP` },
-        update: {},
-        create: {
-          bookingId: booking.id,
-          type: "DP",
-          amount: dpAmount,
-          uniqueKey: `${booking.id}-DP`,
-        },
-      });
-
-      // Update paymentStatus to PAID (but booking status stays PENDING for admin review)
-      await prisma.booking.update({
-        where: { id: booking.id },
-        data: { paymentStatus: "PAID" },
-      });
 
       console.log(`DP payment recorded for Order ID: ${order_id}. Booking stays PENDING for admin review.`);
 
@@ -95,13 +77,11 @@ export async function POST(request: Request) {
       console.log(`Telegram notification sent for Order ID: ${order_id}`);
 
     } else if (isCancelled) {
-      // Payment cancelled/expired/denied — delete booking from database to free the slot and keep DB clean
-      await prisma.booking.delete({
-        where: { id: order_id },
-      }).catch((err: any) => {
-        console.log(`Booking ${order_id} not found, already deleted, or error:`, err.message);
+      // Payment cancelled/expired/denied — delete booking draft from database to free the slot
+      await bookingDraftRepository.deleteDraft(order_id).catch((err: any) => {
+        console.log(`BookingDraft ${order_id} not found, already deleted, or error:`, err.message);
       });
-      console.log(`Booking deleted due to payment cancel/deny/expire for Order ID: ${order_id}`);
+      console.log(`BookingDraft deleted due to payment cancel/deny/expire for Order ID: ${order_id}`);
     } else if (transaction_status === "pending") {
       console.log(`Payment pending for Order ID: ${order_id}`);
     }

@@ -131,5 +131,33 @@ model Testimonial {
   updatedAt   DateTime @updatedAt
 }
 
+model BookingDraft {
+  id               String   @id @default(uuid())
+  // Data form pemesan
+  fullName         String
+  email            String
+  phoneNumber      String?
+  instagram        String?
+  packageType      String
+  categoryId       String?
+  bookingDate      DateTime
+  eventTime        String?
+  eventName        String?
+  eventLocation    String?
+  notes            String?
+  sessionStartTime String?
+  sessionEndTime   String?
+  bookingType      String   @default("DATE_ONLY")
+  // Data pembayaran
+  dpAmount         Float?
+  totalAmount      Float?
+  snapToken        String?
+  snapUrl          String?
+  // Metadata
+  expiresAt        DateTime // TTL: now() + 20 menit
+  createdAt        DateTime @default(now())
+}
+
+
 
 
