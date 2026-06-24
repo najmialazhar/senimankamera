@@ -281,10 +281,15 @@ export function StepPilihTanggal({
                 cellStyle = "text-secondary/30 bg-muted/10 border-transparent cursor-not-allowed";
               } else if (blockingBooking) {
                 const isPending = blockingBooking.status === "PendingApproval" || blockingBooking.status === "PENDING";
+                const isBlocked = blockingBooking.status === "ManualBlock";
                 if (isPending) {
                   cellStyle = "bg-yellow-50 dark:bg-yellow-950/20 text-yellow-800 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900/30 cursor-not-allowed font-semibold";
                   statusText = "Menunggu Persetujuan";
                   dotColor = "bg-yellow-500";
+                } else if (isBlocked) {
+                  cellStyle = "bg-neutral-100 dark:bg-neutral-800/10 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800/30 cursor-not-allowed font-semibold";
+                  statusText = "Diblokir Admin";
+                  dotColor = "bg-neutral-400";
                 } else {
                   cellStyle = "bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-400 border-red-200 dark:border-red-900/30 cursor-not-allowed font-semibold";
                   statusText = "Sudah Dipesan";
@@ -313,7 +318,13 @@ export function StepPilihTanggal({
                     "h-10 border text-xs font-sans rounded-none transition-all flex flex-col items-center justify-center relative",
                     cellStyle
                   )}
-                  title={blockingBooking ? `${blockingBooking.eventName} (${blockingBooking.clientName}) - ${statusText}` : undefined}
+                  title={
+                    blockingBooking 
+                      ? blockingBooking.status === "ManualBlock"
+                        ? `${blockingBooking.eventName} - Diblokir`
+                        : `${blockingBooking.eventName} (${blockingBooking.clientName}) - ${statusText}` 
+                      : undefined
+                  }
                 >
                   <span>{date.getDate()}</span>
                   {dotColor && (
@@ -337,6 +348,10 @@ export function StepPilihTanggal({
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 bg-red-100 border border-red-200 block rounded-none" />
               <span>Sudah Dipesan (Tutup)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 bg-neutral-100 border border-neutral-200 block rounded-none" />
+              <span>Diblokir Admin</span>
             </div>
           </div>
           {bookingType === "DATE_ONLY" && (
