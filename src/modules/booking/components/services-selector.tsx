@@ -102,7 +102,7 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
                         ? "border-amber-200 text-amber-700 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30"
                         : "border-blue-200 text-blue-700 bg-blue-50 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30"
                   )}>
-                    {cat.bookingType === "TIME_BASED" ? "Multi-Session" : "Full-Day"}
+                    {cat.bookingType === "TIME_BASED" ? "Per Jam" : "Harian"}
                   </span>
                 </div>
                 <h3 className="font-serif text-sm sm:text-lg md:text-xl font-medium leading-tight mb-2">
@@ -156,8 +156,8 @@ export function ServicesSelector({ initialPackages, categories }: ServicesSelect
               </div>
               <p className="font-sans text-sm text-secondary font-light max-w-3xl leading-relaxed">
                 {categories.find(c => c.id === selectedCategory)?.bookingType === "TIME_BASED"
-                  ? "Kategori dengan label MULTI-SESSION dipesan berdasarkan Jam Sesi, berbeda dengan kategori FULL-DAY yang memerlukan satu hari penuh untuk satu booking. Jika terdapat booking lain pada jam tertentu, maka slot waktu tersebut tidak dapat dipilih. Namun, pelanggan tetap dapat memilih jam lain yang masih tersedia pada tanggal yang sama. Sebagai contoh, jika terdapat booking pada pukul 08.00–09.00, maka pelanggan lain dapat melakukan booking mulai pukul 09.00 atau setelahnya, selama tidak terjadi benturan jadwal."
-                  : "Kategori dengan label FULL-DAY dipesan berdasarkan Tanggal Acara, berbeda dengan kategori MULTI-SESSION yang menggunakan sistem per Jam. Jika suatu tanggal sudah dipesan oleh klien lain, maka tanggal tersebut akan dianggap penuh dan tidak dapat dipilih kembali oleh pelanggan lain. Oleh karena itu, setiap tanggal hanya dapat digunakan untuk satu booking pada kategori FULL-DAY."}
+                  ? "Kategori dengan label PER JAM dipesan berdasarkan Jam Sesi, berbeda dengan kategori HARIAN yang memerlukan satu hari penuh untuk satu booking. Jika terdapat booking lain pada jam tertentu, maka slot waktu tersebut tidak dapat dipilih. Namun, pelanggan tetap dapat memilih jam lain yang masih tersedia pada tanggal yang sama. Sebagai contoh, jika terdapat booking pada pukul 08.00–09.00, maka pelanggan lain dapat melakukan booking mulai pukul 09.00 atau setelahnya, selama tidak terjadi benturan jadwal."
+                  : "Kategori dengan label HARIAN dipesan berdasarkan Tanggal Acara, berbeda dengan kategori PER JAM yang menggunakan sistem per Jam. Jika suatu tanggal sudah dipesan oleh klien lain, maka tanggal tersebut akan dianggap penuh dan tidak dapat dipilih kembali oleh pelanggan lain. Oleh karena itu, setiap tanggal hanya dapat digunakan untuk satu booking pada kategori HARIAN."}
               </p>
             </div>
 

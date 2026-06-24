@@ -555,7 +555,7 @@ export function StepPilihTanggal({
                     });
                     const timeInfo = booking.sessionStartTime
                       ? ` (${booking.sessionStartTime} – ${booking.sessionEndTime} WIB)`
-                      : " (Full Day)";
+                      : " (Harian)";
                     const isPending = booking.status === "PendingApproval" || booking.status === "PENDING";
 
                     return (
