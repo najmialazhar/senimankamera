@@ -797,7 +797,7 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
                                     </Button>
                                   </>
                                 )}
-                                {(tb.status.toUpperCase() === "APPROVED" || tb.status === "Approved") && (
+                                {(tb.status.toUpperCase() === "APPROVED" || tb.status === "Approved" || tb.status === "ManualBooking") && (
                                   <>
                                     <Button
                                       onClick={() => handleQuickStatusUpdate(tb.id, "LUNAS")}
@@ -915,7 +915,7 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
                               </Button>
                             </>
                           )}
-                          {(selectedSlot.booking.status.toUpperCase() === "APPROVED" || selectedSlot.booking.status === "Approved") && (
+                          {(selectedSlot.booking.status.toUpperCase() === "APPROVED" || selectedSlot.booking.status === "Approved" || selectedSlot.booking.status === "ManualBooking") && (
                             <>
                               <Button
                                 onClick={() => handleQuickStatusUpdate(selectedSlot.booking!.id, "LUNAS")}

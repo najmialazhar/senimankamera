@@ -446,7 +446,7 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                         </>
                       )}
 
-                      {booking.status === "APPROVED" && (
+                      {(booking.status === "APPROVED" || booking.status === "ManualBooking") && (
                         <>
                           <Button
                             variant="outline"
@@ -656,7 +656,7 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                 </>
               )}
 
-              {selectedBooking.status === "APPROVED" && (
+              {(selectedBooking.status === "APPROVED" || selectedBooking.status === "ManualBooking") && (
                 <>
                   <Button
                     onClick={() => handleStatusUpdate(selectedBooking.id, "LUNAS")}
