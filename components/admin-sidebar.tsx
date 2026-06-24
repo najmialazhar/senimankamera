@@ -17,6 +17,7 @@ import {
   MessageSquare,
   ChevronDown,
   History,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -88,6 +89,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
   const scheduleMenuItems = [
     { name: "Ringkasan", href: "/admin", icon: LayoutDashboard },
     { name: "Booking", href: "/admin/bookings", icon: ClipboardList, roles: ["SUPER_ADMIN", "ADMIN_PESANAN"] },
+    { name: "Pelanggan", href: "/admin/customers", icon: Users, roles: ["SUPER_ADMIN", "ADMIN_PESANAN"] },
     { name: "Riwayat", href: "/admin/history", icon: History, roles: ["SUPER_ADMIN", "ADMIN_PESANAN"] },
     { name: "Kalender", href: "/admin/calendar", icon: Calendar, roles: ["SUPER_ADMIN", "ADMIN_PESANAN"] },
     { name: "Rekap", href: "/admin/recap", icon: FileSpreadsheet, roles: ["SUPER_ADMIN", "ADMIN_PESANAN"] },
