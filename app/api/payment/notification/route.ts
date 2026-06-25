@@ -1,62 +1,70 @@
-import crypto from "crypto";
 import { BookingDraftRepository } from "@/src/modules/booking/repositories/booking-draft.repository";
 import { ConfirmBookingFromDraftUseCase } from "@/src/modules/booking/use-cases/confirm-booking-from-draft.use-case";
 import { TelegramService } from "@/src/infrastructure/telegram/telegram.service";
-import { prisma } from "@/src/infrastructure/prisma/client";
+import { DokuService } from "@/src/infrastructure/doku/doku.service";
 
 export async function POST(request: Request) {
+  // Baca raw body sebagai text untuk keperluan signature verification DOKU
+  const rawBody = await request.text();
+
   try {
-    const body = await request.json();
-    const {
-      order_id,
-      status_code,
-      gross_amount,
-      signature_key,
-      transaction_status,
-      fraud_status,
-    } = body;
+    // 1. Verifikasi signature DOKU
+    const dokuService = new DokuService();
+    const requestTarget = "/api/payment/notification";
 
-    // Verify signature key
-    const serverKey = process.env.MIDTRANS_SERVER_KEY || "";
-    const signatureSource = `${order_id}${status_code}${gross_amount}${serverKey}`;
-    const expectedSignature = crypto
-      .createHash("sha512")
-      .update(signatureSource)
-      .digest("hex");
+    const headersObj: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headersObj[key] = value;
+    });
 
-    if (signature_key !== expectedSignature) {
-      console.warn("Unauthorized signature from Midtrans webhook:", signature_key);
+    const isValid = dokuService.verifyWebhookSignature(
+      headersObj,
+      rawBody,
+      requestTarget
+    );
+
+    if (!isValid) {
+      console.warn("Unauthorized signature from DOKU webhook.");
       return Response.json({ success: false, error: "Invalid signature" }, { status: 401 });
     }
 
-    console.log(`Processing Midtrans webhook for Order ID: ${order_id}, Status: ${transaction_status}`);
+    // 2. Parse payload DOKU
+    const body = JSON.parse(rawBody);
+    const orderId = body?.order?.invoice_number as string;
+    const transactionStatus = body?.transaction?.status as string; // "SUCCESS" | "FAILED" | "EXPIRED"
+
+    if (!orderId) {
+      console.warn("DOKU webhook: Missing order.invoice_number in payload.");
+      return Response.json({ success: false, error: "Missing invoice_number" }, { status: 400 });
+    }
+
+    console.log(`Processing DOKU webhook for Invoice: ${orderId}, Status: ${transactionStatus}`);
 
     const bookingDraftRepository = new BookingDraftRepository();
 
-    const isPaid =
-      transaction_status === "settlement" ||
-      (transaction_status === "capture" && fraud_status === "accept");
-
+    const isPaid = transactionStatus === "SUCCESS";
     const isCancelled =
-      transaction_status === "cancel" ||
-      transaction_status === "deny" ||
-      transaction_status === "expire";
+      transactionStatus === "FAILED" ||
+      transactionStatus === "EXPIRED" ||
+      transactionStatus === "REVERSED";
 
     if (isPaid) {
+      // Konfirmasi booking dari draft — simpan permanen ke database
       const confirmUseCase = new ConfirmBookingFromDraftUseCase(bookingDraftRepository);
-      const booking = await confirmUseCase.execute(order_id);
+      const booking = await confirmUseCase.execute(orderId);
+
       if (!booking) {
-        console.warn(`Booking draft not found or already confirmed for Order ID: ${order_id}`);
+        console.warn(`Booking draft not found or already confirmed for Invoice: ${orderId}`);
         return Response.json({ success: true, message: "Draft not found or already confirmed" });
       }
 
-      console.log(`DP payment recorded for Order ID: ${order_id}. Booking stays PENDING for admin review.`);
+      console.log(`DP payment confirmed for Invoice: ${orderId}. Booking stays PENDING for admin review.`);
 
-      // Get package category for Telegram message
+      // Ambil nama kategori paket untuk notifikasi Telegram
       const packageRepo = new (await import("@/src/modules/booking/repositories/package.repository")).PackageRepository();
       const pkg = await packageRepo.findByNameOrCategory(booking.packageType);
 
-      // Send Telegram notification to admin
+      // Kirim notifikasi Telegram ke admin
       const telegramService = new TelegramService();
       await telegramService.sendBookingNotification({
         fullName: booking.client.fullName,
@@ -74,21 +82,23 @@ export async function POST(request: Request) {
         totalAmount: booking.totalAmount || undefined,
       });
 
-      console.log(`Telegram notification sent for Order ID: ${order_id}`);
+      console.log(`Telegram notification sent for Invoice: ${orderId}`);
 
     } else if (isCancelled) {
-      // Payment cancelled/expired/denied — delete booking draft from database to free the slot
-      await bookingDraftRepository.deleteDraft(order_id).catch((err: any) => {
-        console.log(`BookingDraft ${order_id} not found, already deleted, or error:`, err.message);
+      // Pembayaran dibatalkan/expired/gagal — hapus draft agar slot kalender kembali tersedia
+      await bookingDraftRepository.deleteDraft(orderId).catch((err: any) => {
+        console.log(`BookingDraft ${orderId} not found, already deleted, or error:`, err.message);
       });
-      console.log(`BookingDraft deleted due to payment cancel/deny/expire for Order ID: ${order_id}`);
-    } else if (transaction_status === "pending") {
-      console.log(`Payment pending for Order ID: ${order_id}`);
+      console.log(`BookingDraft deleted due to payment ${transactionStatus} for Invoice: ${orderId}`);
+
+    } else {
+      // Status lain (PENDING dll.) — log saja, tidak ada aksi
+      console.log(`DOKU webhook received with status: ${transactionStatus} for Invoice: ${orderId}`);
     }
 
     return Response.json({ success: true });
   } catch (error: any) {
-    console.error("Error processing Midtrans webhook:", error);
+    console.error("Error processing DOKU webhook:", error);
     return Response.json({ success: false, error: error.message }, { status: 500 });
   }
 }

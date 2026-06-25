@@ -66,10 +66,24 @@ export async function getBookingByIdAction(id: string) {
       };
     }
 
+    // Fetch package details to get the category label
+    let categoryName = "";
+    try {
+      const { PackageRepository } = await import("../repositories/package.repository");
+      const packageRepo = new PackageRepository();
+      const pkg = await packageRepo.findByNameOrCategory(booking.packageType);
+      categoryName = pkg?.category?.label || pkg?.category?.name || "";
+    } catch (e) {
+      console.error("Failed to fetch category name for booking success view:", e);
+    }
+
     // Convert Prisma model to a plain JS object (sanitize dates, etc.)
+    const bookingJson = JSON.parse(JSON.stringify(booking));
+    bookingJson.categoryName = categoryName;
+
     return {
       success: true,
-      data: JSON.parse(JSON.stringify(booking)),
+      data: bookingJson,
     };
   } catch (error: any) {
     console.error("getBookingByIdAction error:", error);

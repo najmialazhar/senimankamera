@@ -2,6 +2,7 @@ import { BookingDraftRepository } from "../repositories/booking-draft.repository
 import { BookingRepository } from "../repositories/booking.repository";
 import { PackageRepository } from "../repositories/package.repository";
 import { InitiateBookingDraftSchema, InitiateBookingDraftInputType } from "../schemas/booking-draft.schema";
+import { DokuService } from "@/src/infrastructure/doku/doku.service";
 import crypto from "crypto";
 
 function addMinutesToTime(timeStr: string, minutes: number): string {
@@ -122,36 +123,28 @@ export class InitiateBookingDraftUseCase {
     const dpAmountIdr =
       bookingType === "TIME_BASED" ? DP_FLAT_TIME_BASED : totalAmountIdr * 0.2;
 
-    // Generate a booking ID (this will be the order_id for Midtrans)
+    // Generate a booking ID (this will be the invoice_number for DOKU)
     const tempOrderId = crypto.randomUUID();
 
-    // Call Midtrans Service to generate a Snap token
-    const { MidtransService } = require("@/src/infrastructure/midtrans/midtrans.service");
-    const midtransService = new MidtransService();
-    let snapResult = { token: "", redirectUrl: "" };
+    // Call DOKU Service to generate a Checkout payment URL
+    const dokuService = new DokuService();
+    let paymentUrl = "";
 
     try {
-      snapResult = await midtransService.createSnapTransaction({
-        orderId: tempOrderId,
-        grossAmount: dpAmountIdr,
-        customerDetails: {
-          firstName: parsed.fullName,
-          email: parsed.email,
-          phone: parsed.phoneNumber || undefined,
-        },
-        itemDetails: [
-          {
-            id: targetPackage?.id || "package",
-            price: dpAmountIdr,
-            quantity: 1,
-            name: `DP - ${targetPackage?.name || parsed.packageType}`,
-          }
-        ],
-        baseUrl,
+      const dokuResult = await dokuService.createCheckoutSession({
+        invoiceNumber: tempOrderId,
+        amount: dpAmountIdr,
+        customerName: parsed.fullName,
+        customerEmail: parsed.email,
+        customerPhone: parsed.phoneNumber || undefined,
+        itemName: `DP - ${targetPackage?.name || parsed.packageType}`,
+        paymentDueMinutes: 20,
+        callbackUrl: baseUrl ? `${baseUrl}/book/success?order_id=${tempOrderId}` : undefined,
       });
+      paymentUrl = dokuResult.paymentUrl;
     } catch (err) {
-      console.error("Failed to create Midtrans Snap transaction:", err);
-      throw new Error("Gagal terhubung ke sistem pembayaran Midtrans. Silakan coba lagi.");
+      console.error("Failed to create DOKU Checkout session:", err);
+      throw new Error("Gagal terhubung ke sistem pembayaran DOKU. Silakan coba lagi.");
     }
 
     // Set expiration time to 20 minutes from now
@@ -176,8 +169,8 @@ export class InitiateBookingDraftUseCase {
       bookingType: bookingType,
       dpAmount: dpAmountIdr,
       totalAmount: totalAmountIdr,
-      snapToken: snapResult.token || undefined,
-      snapUrl: snapResult.redirectUrl || undefined,
+      snapToken: undefined,          // DOKU tidak menggunakan client-side token
+      snapUrl: paymentUrl || undefined, // Simpan payment.url DOKU di kolom snapUrl
       expiresAt: expiresAt,
     });
 

@@ -82,8 +82,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     dpAmount: number | null;
     totalAmount: number | null;
   } | null>(null);
-  const [activeSnapToken, setActiveSnapToken] = useState("");
-  const [activeSnapUrl, setActiveSnapUrl] = useState("");
+  const [activePaymentUrl, setActivePaymentUrl] = useState("");
 
   // Terms & Conditions States
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
@@ -114,25 +113,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     loadBookedDates();
   }, []);
 
-  // Dynamically load Midtrans Snap JS SDK
-  useEffect(() => {
-    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "Mid-client-_k7eRgttHZuqM1mq";
-    const isSandbox = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION !== "true";
-    const snapScriptUrl = isSandbox
-      ? "https://app.sandbox.midtrans.com/snap/snap.js"
-      : "https://app.midtrans.com/snap/snap.js";
-
-    // Add script tag to body
-    const script = document.createElement("script");
-    script.src = snapScriptUrl;
-    script.setAttribute("data-client-key", clientKey);
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
+  // No Midtrans Snap JS SDK needed — DOKU uses redirect-based checkout
 
   // Pre-fill packageType from query param
   useEffect(() => {
@@ -187,8 +168,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     startTransition(async () => {
       const response = await cancelDraftBookingAction(createdBooking.id);
       if (response.success) {
-        setActiveSnapToken("");
-        setActiveSnapUrl("");
+        setActivePaymentUrl("");
         setCreatedBooking(null);
       } else {
         setServerError(response.error || "Gagal membatalkan pembayaran sebelumnya. Silakan coba kembali.");
@@ -200,15 +180,15 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
     startTransition(async () => {
       const response = await cancelDraftBookingAction(bookingId);
       if (response.success) {
-        setActiveSnapToken("");
-        setActiveSnapUrl("");
+        setActivePaymentUrl("");
         setCreatedBooking(null);
       }
     });
   };
 
   const handleOpenTermsModal = async () => {
-    if (activeSnapToken) {
+    // Jika sudah ada payment URL dari draft sebelumnya, langsung lanjut ke pembayaran
+    if (activePaymentUrl) {
       handleSubmitBooking();
       return;
     }
@@ -240,32 +220,9 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
   const handleSubmitBooking = async () => {
     setServerError(null);
 
-    // If we already have a snap token, just re-launch payment popup
-    if (activeSnapToken) {
-      if ((window as any).snap) {
-        (window as any).snap.pay(activeSnapToken, {
-          onSuccess: function (result: any) {
-            router.push(`/book/success?order_id=${createdBooking?.id}`);
-          },
-          onPending: function (result: any) {
-            setServerError("Pembayaran Anda sedang tertunda. Silakan selesaikan transfer bank Anda, atau klik tombol 'Bayar Sekarang' di bawah untuk membuka kembali detail instruksi pembayaran.");
-          },
-          onError: function (result: any) {
-            setServerError("Pembayaran gagal. Silakan coba kembali.");
-            if (createdBooking?.id) {
-              cancelAndClearBooking(createdBooking.id);
-            }
-          },
-          onClose: function () {
-            setServerError("Pembayaran belum diselesaikan. Anda dapat mencoba kembali dengan mengklik tombol di bawah.");
-            if (createdBooking?.id) {
-              cancelAndClearBooking(createdBooking.id);
-            }
-          },
-        });
-      } else if (activeSnapUrl) {
-        window.location.href = activeSnapUrl;
-      }
+    // Jika sudah ada payment URL (draft sudah dibuat), langsung redirect ke DOKU
+    if (activePaymentUrl) {
+      window.location.href = activePaymentUrl;
       return;
     }
 
@@ -303,41 +260,21 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
       const response = await initiateDraftBookingAction(validation.data);
       if (response.success && response.data) {
         const bookingData = response.data;
-        const snapToken = bookingData.snapToken;
-        const snapUrl = bookingData.snapUrl;
+        const paymentUrl = bookingData.snapUrl; // snapUrl kolom diisi payment.url DOKU
 
-        // Save states for potential retry
+        // Simpan state booking dan payment URL untuk kemungkinan retry
         setCreatedBooking({
           id: bookingData.id,
           dpAmount: bookingData.dpAmount,
           totalAmount: bookingData.totalAmount,
         });
-        setActiveSnapToken(snapToken || "");
-        setActiveSnapUrl(snapUrl || "");
+        setActivePaymentUrl(paymentUrl || "");
 
-        // If Midtrans Snap is loaded, trigger the checkout modal popup
-        if (snapToken && (window as any).snap) {
-          (window as any).snap.pay(snapToken, {
-            onSuccess: function (result: any) {
-              router.push(`/book/success?order_id=${bookingData.id}`);
-            },
-            onPending: function (result: any) {
-              setServerError("Pembayaran Anda sedang tertunda. Silakan selesaikan transfer bank Anda, atau klik tombol 'Bayar Sekarang' di bawah untuk membuka kembali detail instruksi pembayaran.");
-            },
-            onError: function (result: any) {
-              setServerError("Pembayaran gagal. Silakan coba kembali.");
-              cancelAndClearBooking(bookingData.id);
-            },
-            onClose: function () {
-              setServerError("Pembayaran belum diselesaikan. Anda dapat mencoba kembali dengan mengklik tombol di bawah.");
-              cancelAndClearBooking(bookingData.id);
-            },
-          });
-        } else if (snapUrl) {
-          // Fallback redirect if script not fully loaded
-          window.location.href = snapUrl;
+        // Redirect langsung ke halaman pembayaran DOKU
+        if (paymentUrl) {
+          window.location.href = paymentUrl;
         } else {
-          router.push(`/book/success?order_id=${bookingData.id}`);
+          setServerError("Gagal mendapatkan halaman pembayaran. Silakan coba lagi.");
         }
       } else {
         setServerError(response.error || "Gagal mengirim pesanan booking.");
@@ -484,7 +421,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
             bookingType={selectedCategoryBookingType}
             onSubmit={handleOpenTermsModal}
             onBack={handleBack}
-            isPayRetry={!!activeSnapToken}
+            isPayRetry={!!activePaymentUrl}
             onCancelPayment={handleCancelPayment}
           />
         )}

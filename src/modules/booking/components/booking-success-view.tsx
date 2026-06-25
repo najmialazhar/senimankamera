@@ -25,6 +25,7 @@ interface BookingData {
   sessionStartTime?: string | null;
   sessionEndTime?: string | null;
   client: ClientData;
+  categoryName?: string | null;
 }
 
 interface BookingSuccessViewProps {
@@ -37,7 +38,7 @@ export function BookingSuccessView({ booking }: BookingSuccessViewProps) {
   const isTimeBased = !!booking.sessionStartTime;
 
   const waText = encodeURIComponent(
-    `Halo Kak, saya sudah melakukan booking dan pembayaran DP untuk acara saya dengan ID: ${booking.id}.\n\nBerikut detail pesanan saya:\n- Klien: ${booking.client.fullName}\n- Instagram: ${booking.client.instagram || "-"}\n- Paket: Sesi ${booking.packageType}\n- Acara: ${booking.eventName || "-"}\n- Tanggal: ${new Date(booking.bookingDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}\n- Waktu: ${isTimeBased ? `${booking.sessionStartTime} – ${booking.sessionEndTime}` : booking.eventTime || "-"} WIB\n\nMohon dibantu untuk proses konfirmasi booking. Terima kasih.`
+    `Halo Kak, saya sudah melakukan booking dan pembayaran DP untuk acara saya dengan ID: ${booking.id}.\n\nBerikut detail pesanan saya:\n- Klien: ${booking.client.fullName}\n- Instagram: ${booking.client.instagram || "-"}\n- Paket: ${booking.categoryName ? `${booking.categoryName} - ` : ""}${booking.packageType}\n- Acara: ${booking.eventName || "-"}\n- Tanggal: ${new Date(booking.bookingDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}\n- Waktu: ${isTimeBased ? `${booking.sessionStartTime} – ${booking.sessionEndTime}` : booking.eventTime || "-"} WIB\n\nMohon dibantu untuk proses konfirmasi booking. Terima kasih.`
   );
   const waUrl = `https://wa.me/6285721598190?text=${waText}`;
 
@@ -89,12 +90,12 @@ export function BookingSuccessView({ booking }: BookingSuccessViewProps) {
       </p>
 
       {/* Alert Banner for Manual WhatsApp Confirmation */}
-      {(booking.status === "APPROVED" || booking.status === "LUNAS") && (
-        <div className="w-full mb-6 p-4 border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 font-sans text-xs text-left leading-relaxed rounded-none flex items-start gap-2.5">
+      {(booking.status === "PENDING" || booking.status === "APPROVED" || booking.status === "LUNAS") && (
+        <div className="w-full mb-6 p-4 border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/30 text-red-800 dark:text-red-300 font-sans text-xs text-left leading-relaxed rounded-none flex items-start gap-2.5 animate-pulse">
           <span className="text-base shrink-0 leading-none">⚠️</span>
           <div>
-            <span className="font-bold uppercase tracking-wider block mb-1">Konfirmasi Manual Wajib</span>
-            Pembayaran Anda telah diterima. Anda <strong>WAJIB</strong> melakukan konfirmasi manual melalui WhatsApp untuk mengamankan slot jadwal pemotretan Anda. Silakan klik tombol <strong>"Hubungi via WhatsApp Owner"</strong> di bawah untuk mengirim detail pemesanan ke admin.
+            <span className="font-bold uppercase tracking-wider block mb-1 text-red-700 dark:text-red-400">Konfirmasi Manual (WAJIB)</span>
+            Pembayaran Anda telah diterima. Anda <strong>WAJIB</strong> melakukan konfirmasi manual melalui WhatsApp untuk mengamankan slot jadwal pemotretan Anda. Silakan klik tombol merah <strong>"Hubungi via WhatsApp Owner (WAJIB)"</strong> di bawah untuk mengirim detail pemesanan ke admin.
           </div>
         </div>
       )}
@@ -161,12 +162,12 @@ export function BookingSuccessView({ booking }: BookingSuccessViewProps) {
           onClick={() => window.open(waUrl, "_blank")}
           className={cn(
             "rounded-none font-sans text-[10px] uppercase tracking-widest py-6 text-white w-full flex items-center justify-center gap-2 cursor-pointer font-bold transition-all duration-300",
-            (booking.status === "APPROVED" || booking.status === "LUNAS")
-              ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg animate-pulse"
+            (booking.status === "PENDING" || booking.status === "APPROVED" || booking.status === "LUNAS")
+              ? "bg-red-600 hover:bg-red-700 shadow-lg animate-pulse"
               : "bg-primary hover:opacity-90"
           )}
         >
-          Hubungi via WhatsApp Owner Untuk Konfirmasi Manual
+          Hubungi via WhatsApp Owner (WAJIB)
         </Button>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button 
