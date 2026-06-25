@@ -66,13 +66,19 @@ export default async function BookingSuccessPage({ searchParams }: BookingSucces
   }
 
   if (!result.success || !result.data) {
+    const isCancelled = result.error === "Booking tidak ditemukan.";
+    const title = isCancelled ? "Pemesanan Dibatalkan" : "Pemesanan Tidak Ditemukan";
+    const message = isCancelled 
+      ? "Pembayaran Anda dibatalkan, telah kedaluwarsa, atau pemesanan ini telah diproses. Silakan lakukan pemesanan kembali jika Anda ingin menjadwalkan ulang."
+      : (result.error || "Kami tidak dapat menemukan detail pemesanan dengan ID yang diberikan.");
+
     return (
       <div className="w-full max-w-[1440px] mx-auto px-6 md:px-20 py-20 flex flex-col items-center justify-center min-h-[50vh]">
         <div className="w-full max-w-md border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/30 p-8 text-center flex flex-col items-center">
           <AlertCircle className="w-12 h-12 text-red-700 dark:text-red-400 mb-4 stroke-1 animate-pulse" />
-          <h2 className="font-serif text-2xl text-red-900 dark:text-red-300 mb-2 font-medium">Pemesanan Tidak Ditemukan</h2>
+          <h2 className="font-serif text-2xl text-red-900 dark:text-red-300 mb-2 font-medium">{title}</h2>
           <p className="font-sans text-xs text-red-700 dark:text-red-400 font-light mb-6 leading-relaxed">
-            {result.error || "Kami tidak dapat menemukan detail pemesanan dengan ID yang diberikan."}
+            {message}
           </p>
           <a href="/book" className="w-full">
             <Button className="rounded-none font-sans text-xs uppercase tracking-widest py-5 text-white bg-primary hover:opacity-90 w-full cursor-pointer">
