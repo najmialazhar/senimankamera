@@ -103,6 +103,10 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
   const [isPending, startTransition] = useTransition();
   const { confirm } = useModal();
 
+  const [isLunasConfirmOpen, setIsLunasConfirmOpen] = useState(false);
+  const [lunasConfirmInput, setLunasConfirmInput] = useState("");
+  const [lunasBookingId, setLunasBookingId] = useState<string | null>(null);
+
   // Extract unique years from booking dates
   const uniqueYears = Array.from(
     new Set(
@@ -147,10 +151,24 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const handleStatusUpdate = async (id: string, status: string) => {
-    const isConfirmed = await confirm(`Apakah Anda yakin ingin mengubah status booking ini menjadi ${status}?`);
-    if (!isConfirmed) {
-      return;
+  const executeLunas = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lunasBookingId || lunasConfirmInput !== "Lunas") return;
+
+    const targetId = lunasBookingId;
+    setIsLunasConfirmOpen(false);
+    setLunasBookingId(null);
+    setLunasConfirmInput("");
+
+    await handleStatusUpdate(targetId, "LUNAS", true);
+  };
+
+  const handleStatusUpdate = async (id: string, status: string, skipConfirm = false) => {
+    if (!skipConfirm) {
+      const isConfirmed = await confirm(`Apakah Anda yakin ingin mengubah status booking ini menjadi ${status}?`);
+      if (!isConfirmed) {
+        return;
+      }
     }
 
     startTransition(async () => {
@@ -457,7 +475,11 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => handleStatusUpdate(booking.id, "LUNAS")}
+                            onClick={() => {
+                              setLunasBookingId(booking.id);
+                              setLunasConfirmInput("");
+                              setIsLunasConfirmOpen(true);
+                            }}
                             className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-100"
                             title="Tandai Lunas"
                           >
@@ -667,7 +689,11 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
               {(selectedBooking.status === "APPROVED" || selectedBooking.status === "ManualBooking") && (
                 <>
                   <Button
-                    onClick={() => handleStatusUpdate(selectedBooking.id, "LUNAS")}
+                    onClick={() => {
+                      setLunasBookingId(selectedBooking.id);
+                      setLunasConfirmInput("");
+                      setIsLunasConfirmOpen(true);
+                    }}
                     disabled={isPending}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-sans text-xs uppercase tracking-wider py-5"
                   >
@@ -761,6 +787,63 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                   className="rounded-none font-sans text-xs uppercase tracking-wider py-4"
                 >
                   {isPending ? "Memproses..." : "Reschedule"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* LUNAS CONFIRMATION DIALOG */}
+      {isLunasConfirmOpen && lunasBookingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md rounded-none border-border/40 shadow-2xl bg-background text-foreground animate-in zoom-in-95 duration-200">
+            <CardHeader className="border-b border-border/20 pb-4">
+              <CardTitle className="font-serif text-lg text-emerald-600 font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5" />
+                Persetujuan Tandai Lunas
+              </CardTitle>
+              <CardDescription className="font-sans text-xs">
+                Tindakan ini akan menandai status pesanan ini sebagai LUNAS dan mencatat pelunasan biaya.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={executeLunas}>
+              <CardContent className="py-6 space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="lunasConfirmInput" className="text-xs font-semibold text-secondary">
+                    Ketik <span className="font-bold text-emerald-600">Lunas</span> untuk mengonfirmasi tindakan ini:
+                  </label>
+                  <Input
+                    type="text"
+                    id="lunasConfirmInput"
+                    placeholder='Ketik "Lunas" disini'
+                    value={lunasConfirmInput}
+                    onChange={(e) => setLunasConfirmInput(e.target.value)}
+                    required
+                    className="rounded-none border-border/40 text-xs py-5"
+                    autoComplete="off"
+                  />
+                </div>
+              </CardContent>
+              <div className="border-t border-border/20 px-6 py-4 flex justify-end gap-2 bg-neutral-50 dark:bg-neutral-900">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsLunasConfirmOpen(false);
+                    setLunasBookingId(null);
+                    setLunasConfirmInput("");
+                  }}
+                  className="rounded-none border-border font-sans text-xs uppercase tracking-wider py-4"
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending || lunasConfirmInput !== "Lunas"}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-sans text-xs uppercase tracking-wider py-4"
+                >
+                  {isPending ? "Memproses..." : "Konfirmasi Lunas"}
                 </Button>
               </div>
             </form>
