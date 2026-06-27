@@ -375,7 +375,7 @@ export function StepPilihPaket({
           <Button
             type="button"
             onClick={onNext}
-            className="font-sans text-xs uppercase tracking-widest py-5 px-10 rounded-none font-bold text-white transition-all hover:opacity-90 cursor-pointer"
+            className="font-sans text-xs uppercase tracking-widest py-5 px-10 rounded-none font-bold text-white transition-all hover:opacity-90 cursor-pointer w-full sm:w-auto"
           >
             Lanjut ke Tanggal & Waktu →
           </Button>

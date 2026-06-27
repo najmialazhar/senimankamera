@@ -585,12 +585,12 @@ export function StepPilihTanggal({
       </div>
 
       {/* Navigation actions */}
-      <div className="flex justify-between pt-4 border-t border-border/20">
+      <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-border/20">
         <Button
           type="button"
           variant="outline"
           onClick={onBack}
-          className="font-sans text-xs uppercase tracking-widest py-5 px-8 rounded-none border-border"
+          className="font-sans text-xs uppercase tracking-widest py-5 px-8 rounded-none border-border order-2 sm:order-1 w-full sm:w-auto"
         >
           ← Kembali
         </Button>
@@ -598,7 +598,7 @@ export function StepPilihTanggal({
           <Button
             type="button"
             onClick={onNext}
-            className="font-sans text-xs uppercase tracking-widest py-5 px-10 rounded-none font-bold text-white transition-all hover:opacity-90 cursor-pointer"
+            className="font-sans text-xs uppercase tracking-widest py-5 px-10 rounded-none font-bold text-white transition-all hover:opacity-90 cursor-pointer order-1 sm:order-2 w-full sm:w-auto"
           >
             Lanjut ke Data Pemesan →
           </Button>
