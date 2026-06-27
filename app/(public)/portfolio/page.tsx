@@ -30,9 +30,9 @@ export default async function PortfolioPage() {
     isDbError = true;
   }
 
-  if (isDbError || items.length === 0) {
-    return null;
-  }
+  // Render page even if items are empty, so layout is preserved and empty state is handled gracefully
+  const displayItems = items || [];
+  const displayCategories = categories || [];
 
-  return <PortfolioGrid initialItems={items} categories={categories} />;
+  return <PortfolioGrid initialItems={displayItems} categories={displayCategories} />;
 }

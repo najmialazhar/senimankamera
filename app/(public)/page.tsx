@@ -34,10 +34,6 @@ export default async function HomePage() {
     isDbError = true;
   }
 
-  if (isDbError || (latestGalleries.length === 0 && testimonials.length === 0)) {
-    return null;
-  }
-
   const displayItems = latestGalleries;
   const displayTestimonials = testimonials.slice(0, 6);
 
@@ -126,7 +122,13 @@ export default async function HomePage() {
         </div>
 
         {/* Collections Row */}
-        <FeaturedCollections items={displayItems} />
+        {displayItems.length > 0 ? (
+          <FeaturedCollections items={displayItems} />
+        ) : (
+          <div className="max-w-[1440px] mx-auto px-6 md:px-20 text-center py-16 text-secondary/60 font-sans text-sm border border-dashed border-border/30 rounded bg-muted/10">
+            Belum ada koleksi pilihan yang ditambahkan.
+          </div>
+        )}
       </section>
 
       {/* Testimonials Section */}
@@ -149,7 +151,13 @@ export default async function HomePage() {
         </div>
 
         {/* Testimonials Slider Row */}
-        <FeaturedTestimonials items={displayTestimonials} />
+        {displayTestimonials.length > 0 ? (
+          <FeaturedTestimonials items={displayTestimonials} />
+        ) : (
+          <div className="max-w-[1440px] mx-auto px-6 md:px-20 text-center py-16 text-secondary/60 font-sans text-sm border border-dashed border-border/30 rounded bg-muted/10">
+            Belum ada testimoni klien.
+          </div>
+        )}
       </section>
     </div>
   );

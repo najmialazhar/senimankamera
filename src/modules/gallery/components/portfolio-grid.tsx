@@ -87,44 +87,50 @@ export function PortfolioGrid({ initialItems, categories: dbCategories }: Portfo
       </section>
 
       {/* Masonry-Style Grid using CSS Columns */}
-      <section className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
-        {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            className="break-inside-avoid group cursor-pointer flex flex-col mb-8"
-          >
+      {filteredItems.length === 0 ? (
+        <div className="w-full text-center py-24 text-secondary/60 font-sans text-sm border border-dashed border-border/30 rounded bg-muted/10">
+          Belum ada karya seni yang diunggah untuk kategori ini.
+        </div>
+      ) : (
+        <section className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
+          {filteredItems.map((item) => (
             <div
-              className={cn(
-                "w-full overflow-hidden bg-muted relative border border-border/30 mb-4",
-                item.aspect === "portrait" && "aspect-[3/4]",
-                item.aspect === "square" && "aspect-square",
-                item.aspect === "wide" && "aspect-[16/9]"
-              )}
+              key={item.id}
+              className="break-inside-avoid group cursor-pointer flex flex-col mb-8"
             >
-              <Image
-                src={item.imageUrl}
-                alt={item.title}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className="object-cover transition-transform duration-[0.8s] group-hover:scale-105"
-              />
+              <div
+                className={cn(
+                  "w-full overflow-hidden bg-muted relative border border-border/30 mb-4",
+                  item.aspect === "portrait" && "aspect-[3/4]",
+                  item.aspect === "square" && "aspect-square",
+                  item.aspect === "wide" && "aspect-[16/9]"
+                )}
+              >
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover transition-transform duration-[0.8s] group-hover:scale-105"
+                />
+              </div>
+              <div>
+                <span className="font-sans text-[10px] uppercase tracking-widest text-secondary block mb-1 font-bold">
+                  {item.subCategory}
+                </span>
+                <h3 className="font-serif text-xl md:text-2xl text-primary font-medium">
+                  {item.title}
+                </h3>
+                {item.description && (
+                  <p className="font-sans text-xs text-secondary mt-2 font-light leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <span className="font-sans text-[10px] uppercase tracking-widest text-secondary block mb-1 font-bold">
-                {item.subCategory}
-              </span>
-              <h3 className="font-serif text-xl md:text-2xl text-primary font-medium">
-                {item.title}
-              </h3>
-              {item.description && (
-                <p className="font-sans text-xs text-secondary mt-2 font-light leading-relaxed">
-                  {item.description}
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
+      )}
 
 
     </div>

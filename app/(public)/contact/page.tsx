@@ -1,6 +1,4 @@
 import React from "react";
-import { prisma } from "@/src/infrastructure/prisma/client";
-import { BackgroundSlideshow } from "@/components/background-slideshow";
 
 function WhatsAppIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -29,29 +27,18 @@ function InstagramIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export default async function ContactPage() {
-  let bgImages = ["/contact-bg.png", "/hero.png", "/logo.jpg"];
-  try {
-    const galleries = await prisma.gallery.findMany({
-      where: {
-        mediaType: "image",
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 6,
-    });
-    if (galleries.length > 0) {
-      bgImages = galleries.map((g: any) => g.imageUrl);
-    }
-  } catch (error) {
-    console.error("Failed to fetch gallery backgrounds:", error);
-  }
-
   return (
     <div className="w-full">
       <section className="relative w-full h-[80vh] md:h-[90vh] bg-neutral-200 overflow-hidden flex flex-col justify-end">
-        {/* Background Slideshow */}
-        <BackgroundSlideshow images={bgImages} />
+        {/* Background Image (Static, same as Hero) */}
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url('/hero.png')`
+          }}
+        />
+        {/* Dark Vignette Overlay */}
+        <div className="absolute inset-0 z-10 bg-gradient-to-b from-black/10 via-transparent to-black/60" />
 
         {/* Content */}
         <div className="relative z-20 w-full px-6 md:px-20 max-w-[1440px] mx-auto pb-16 md:pb-24 text-white">
@@ -71,7 +58,7 @@ export default async function ContactPage() {
                 href="https://www.instagram.com/seniman_kamera4888?igsh=ems1ZzhqeGQ2bGtu"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-4 group hover:opacity-85 transition-all w-fit animate-in fade-in slide-in-from-bottom duration-500"
+                className="flex items-center gap-4 group hover:opacity-85 transition-all w-fit"
               >
                 <div className="p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-none group-hover:bg-white/25 transition-all duration-300">
                   <InstagramIcon className="w-5 h-5 text-white" />
@@ -91,7 +78,7 @@ export default async function ContactPage() {
                 href="https://wa.me/6285721598190"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-4 group hover:opacity-85 transition-all w-fit animate-in fade-in slide-in-from-bottom duration-500 delay-75"
+                className="flex items-center gap-4 group hover:opacity-85 transition-all w-fit"
               >
                 <div className="p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-none group-hover:bg-white/25 transition-all duration-300">
                   <WhatsAppIcon className="w-5 h-5 text-white" />
@@ -111,7 +98,7 @@ export default async function ContactPage() {
                 href="https://www.tiktok.com/@seniman_kamera"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-4 group hover:opacity-85 transition-all w-fit animate-in fade-in slide-in-from-bottom duration-500 delay-150"
+                className="flex items-center gap-4 group hover:opacity-85 transition-all w-fit"
               >
                 <div className="p-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-none group-hover:bg-white/25 transition-all duration-300">
                   <TikTokIcon className="w-5 h-5 text-white" />
