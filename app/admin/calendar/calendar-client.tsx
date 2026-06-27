@@ -19,7 +19,9 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  Trash2
+  Trash2,
+  Square,
+  CheckSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -27,6 +29,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { blockDateAction } from "@/src/modules/calendar/actions/block-date.action";
 import { unblockDateAction } from "@/src/modules/calendar/actions/unblock-date.action";
+import { blockDatesAction } from "@/src/modules/calendar/actions/block-dates.action";
+import { unblockDatesAction } from "@/src/modules/calendar/actions/unblock-dates.action";
 import { createManualBookingAction } from "@/src/modules/calendar/actions/create-manual-booking.action";
 import { updateBookingStatusAction } from "@/src/modules/booking/actions/update-booking-status.action";
 import { useModal } from "@/components/modal-provider";
@@ -125,6 +129,10 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
   const [slots, setSlots] = useState<CalendarSlot[]>(initialSlots);
   const [timeBookings, setTimeBookings] = useState<TimeBasedBooking[]>(timeBasedBookings);
   const [selectedDate, setSelectedDate] = useState<string | null>(null); // YYYY-MM-DD
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [isBatchBlockOpen, setIsBatchBlockOpen] = useState(false);
+  const [batchBlockReason, setBatchBlockReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const { confirm } = useModal();
 
@@ -232,6 +240,49 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
   };
 
   // Actions
+  const handleBlockDates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedDates.length === 0 || !batchBlockReason) return;
+
+    startTransition(async () => {
+      const res = await blockDatesAction(selectedDates, batchBlockReason);
+      if (res.success && res.data) {
+        const updatedSlots = res.data;
+        setSlots((prev) => {
+          const filtered = prev.filter(
+            (s) => !selectedDates.includes(formatDateKey(new Date(s.date)))
+          );
+          return [...filtered, ...updatedSlots];
+        });
+        setIsBatchBlockOpen(false);
+        setBatchBlockReason("");
+        setSelectedDates([]);
+        toast.success("Semua tanggal terpilih berhasil diblokir!");
+      } else {
+        toast.error(res.error || "Gagal memblokir tanggal-tanggal tersebut");
+      }
+    });
+  };
+
+  const handleUnblockDates = async () => {
+    if (selectedDates.length === 0) return;
+    const isConfirmed = await confirm(`Apakah Anda yakin ingin membuka blokir ${selectedDates.length} tanggal terpilih?`);
+    if (!isConfirmed) return;
+
+    startTransition(async () => {
+      const res = await unblockDatesAction(selectedDates);
+      if (res.success) {
+        setSlots((prev) =>
+          prev.filter((s) => !selectedDates.includes(formatDateKey(new Date(s.date))))
+        );
+        setSelectedDates([]);
+        toast.success("Blokir tanggal terpilih dibuka.");
+      } else {
+        toast.error(res.error || "Gagal membuka blokir");
+      }
+    });
+  };
+
   const handleBlockDate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !blockReason) return;
@@ -525,8 +576,32 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
         {/* Calendar Card (7 cols) */}
         <div className="border border-border/40 bg-card p-6 lg:col-span-8 rounded-none">
           {/* Header Calendar */}
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-serif text-lg text-primary font-medium capitalize">{monthYearLabel}</h3>
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <h3 className="font-serif text-lg text-primary font-medium capitalize">{monthYearLabel}</h3>
+              <Button
+                variant={isMultiSelectMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setIsMultiSelectMode(!isMultiSelectMode);
+                  setSelectedDates([]);
+                  setSelectedDate(null);
+                }}
+                className="h-8 rounded-none text-xs font-semibold uppercase tracking-wider px-3 flex items-center gap-1.5"
+              >
+                {isMultiSelectMode ? (
+                  <>
+                    <CheckSquare className="w-3.5 h-3.5" />
+                    <span>Pilih Banyak Aktif</span>
+                  </>
+                ) : (
+                  <>
+                    <Square className="w-3.5 h-3.5" />
+                    <span>Pilih Banyak Tanggal</span>
+                  </>
+                )}
+              </Button>
+            </div>
             <div className="flex gap-1">
               <Button
                 variant="outline"
@@ -560,6 +635,7 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
               const formatted = formatDateKey(date);
               const slot = getSlotForDate(date);
               const isSelected = selectedDate === formatted;
+              const isBatchSelected = isMultiSelectMode && selectedDates.includes(formatted);
               const isToday = formatted === todayStr;
 
               let cellClass = "bg-card border-border/40 text-primary hover:border-primary/60";
@@ -588,7 +664,9 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
                 }
               }
 
-              if (isSelected) {
+              if (isBatchSelected) {
+                cellClass = "bg-primary/20 text-primary border-primary font-bold ring-2 ring-primary ring-offset-1";
+              } else if (isSelected) {
                 cellClass = "bg-primary text-primary-foreground border-primary font-bold";
               } else if (!isCurrentMonth) {
                 cellClass += " opacity-40";
@@ -597,16 +675,32 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
               return (
                 <button
                   key={key}
-                  onClick={() => setSelectedDate(formatted)}
+                  onClick={() => {
+                    if (isMultiSelectMode) {
+                      setSelectedDates((prev) =>
+                        prev.includes(formatted)
+                          ? prev.filter((d) => d !== formatted)
+                          : [...prev, formatted]
+                      );
+                    } else {
+                      setSelectedDate(formatted);
+                    }
+                  }}
                   className={`h-14 border text-xs font-sans rounded-none transition-all flex flex-col items-center justify-between p-2 relative ${cellClass}`}
                 >
                   <div className="flex w-full items-start justify-between">
                     <span className={isToday ? "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center font-bold text-[10px]" : ""}>
                       {date.getDate()}
                     </span>
-                    {indicatorColor && (
+                    {isMultiSelectMode ? (
+                      isBatchSelected ? (
+                        <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <Square className="w-3.5 h-3.5 text-secondary/40 group-hover:text-secondary/60 transition-colors" />
+                      )
+                    ) : indicatorColor ? (
                       <span className={`w-1.5 h-1.5 rounded-full ${indicatorColor}`} />
-                    )}
+                    ) : null}
                   </div>
                   {slot && (
                     <span className="text-[8px] uppercase tracking-wider font-bold truncate max-w-full block">
@@ -663,10 +757,12 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
             <CardHeader className="border-b border-border/20 pb-4">
               <CardTitle className="font-serif text-sm font-medium flex items-center gap-2">
                 <CalendarIcon className="w-4 h-4 text-primary" />
-                <span>Tanggal Terpilih</span>
+                <span>{isMultiSelectMode ? "Blokir Massal" : "Tanggal Terpilih"}</span>
               </CardTitle>
               <CardDescription className="font-sans text-xs">
-                {selectedDate ? (
+                {isMultiSelectMode ? (
+                  `${selectedDates.length} Tanggal Terpilih`
+                ) : selectedDate ? (
                   new Intl.DateTimeFormat("id-ID", {
                     weekday: "long",
                     day: "numeric",
@@ -680,7 +776,59 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
             </CardHeader>
 
             <CardContent className="pt-6">
-              {selectedDate ? (
+              {isMultiSelectMode ? (
+                <div className="space-y-6">
+                  {selectedDates.length === 0 ? (
+                    <div className="text-center font-sans text-xs text-secondary/60 py-12 italic border border-dashed border-border/30 rounded p-4 bg-muted/5">
+                      Silakan pilih beberapa tanggal di kalender untuk melakukan blokir / buka blokir massal.
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <span className="text-[10px] uppercase font-bold text-secondary tracking-wider block border-b border-border/10 pb-1">Daftar Tanggal</span>
+                        <div className="flex flex-wrap gap-1.5 max-h-[150px] overflow-y-auto pr-1">
+                          {selectedDates.map((dateStr) => (
+                            <Badge key={dateStr} variant="secondary" className="font-sans text-[10px] rounded-none py-1 px-2 flex items-center gap-1">
+                              <span>
+                                {new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(new Date(dateStr))}
+                              </span>
+                              <button
+                                onClick={() => setSelectedDates(prev => prev.filter(d => d !== dateStr))}
+                                className="hover:text-red-500 font-bold"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 pt-2">
+                        <Button
+                          onClick={() => setIsBatchBlockOpen(true)}
+                          className="w-full rounded-none font-sans text-xs uppercase tracking-wider py-5 flex items-center justify-center gap-2 font-bold"
+                        >
+                          <Lock className="w-3.5 h-3.5" /> Blokir Tanggal Terpilih
+                        </Button>
+                        <Button
+                          onClick={handleUnblockDates}
+                          variant="outline"
+                          className="w-full rounded-none border-neutral-200 text-xs uppercase tracking-wider font-semibold py-5 flex items-center justify-center gap-2 text-neutral-600 hover:text-neutral-900"
+                        >
+                          <Unlock className="w-3.5 h-3.5" /> Buka Blokir Terpilih
+                        </Button>
+                        <Button
+                          onClick={() => setSelectedDates([])}
+                          variant="ghost"
+                          className="w-full rounded-none text-xs uppercase tracking-wider font-medium py-3 text-secondary/60 hover:text-secondary hover:bg-neutral-50"
+                        >
+                          Reset Pilihan
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : selectedDate ? (
                 selectedSlot?.status === "ManualBlock" ? (
                     /* MANUALLY BLOCKED VIEW */
                     <div className="space-y-4">
@@ -1082,6 +1230,52 @@ export function CalendarClient({ initialSlots, timeBasedBookings, packages, stat
                   className="rounded-none font-sans text-xs uppercase tracking-wider py-4 font-bold"
                 >
                   {isPending ? "Memproses..." : "Blokir Tanggal"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* BATCH BLOCK DATES DIALOG */}
+      {isBatchBlockOpen && selectedDates.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md rounded-none border-border/40 shadow-2xl bg-background text-foreground animate-in zoom-in-95 duration-200">
+            <CardHeader className="border-b border-border/20 pb-4">
+              <CardTitle className="font-serif text-lg text-primary font-medium">Blokir Banyak Tanggal</CardTitle>
+              <CardDescription className="font-sans text-xs">
+                Kunci {selectedDates.length} tanggal terpilih dari pesanan client secara massal.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleBlockDates}>
+              <CardContent className="py-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="batchBlockReason" className="text-[10px] uppercase font-bold text-secondary tracking-wider block">Alasan Pemblokiran Massal <span className="text-red-600">*</span></label>
+                  <textarea
+                    id="batchBlockReason"
+                    placeholder="Contoh: Hari Libur Studio, Maintenance Alat, Keperluan Owner, dll."
+                    value={batchBlockReason}
+                    onChange={(e) => setBatchBlockReason(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-transparent border border-border/40 focus:border-primary focus:outline-none rounded-none text-primary resize-none text-xs min-h-[90px]"
+                  />
+                </div>
+              </CardContent>
+              <div className="border-t border-border/20 px-6 py-4 flex justify-end gap-2 bg-neutral-50 dark:bg-neutral-900">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsBatchBlockOpen(false)}
+                  className="rounded-none border-border font-sans text-xs uppercase tracking-wider py-4"
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending || !batchBlockReason}
+                  className="rounded-none font-sans text-xs uppercase tracking-wider py-4 font-bold"
+                >
+                  {isPending ? "Memproses..." : "Blokir Semua"}
                 </Button>
               </div>
             </form>

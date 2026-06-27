@@ -1,4 +1,5 @@
 import { prisma } from "@/src/infrastructure/prisma/client";
+import { Prisma } from "@prisma/client";
 
 export class CalendarRepository {
   async findSlotByDate(date: Date) {
@@ -204,5 +205,78 @@ export class CalendarRepository {
       blockedDates: blockedCount,
       cancelled: cancelledCount,
     };
+  }
+
+  async blockDates(dates: Date[], reason: string, adminUser: string) {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const results = [];
+      for (const date of dates) {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(12, 0, 0, 0);
+
+        const existing = await tx.calendarSlot.findFirst({
+          where: {
+            date: {
+              gte: new Date(new Date(date).setHours(0, 0, 0, 0)),
+              lte: new Date(new Date(date).setHours(23, 59, 59, 999)),
+            },
+          },
+        });
+
+        let slot;
+        if (existing) {
+          slot = await tx.calendarSlot.update({
+            where: { id: existing.id },
+            data: {
+              status: "ManualBlock",
+              bookingId: null,
+              blockedReason: reason,
+              createdBy: adminUser,
+            },
+          });
+        } else {
+          slot = await tx.calendarSlot.create({
+            data: {
+              date: startOfDay,
+              status: "ManualBlock",
+              bookingId: null,
+              blockedReason: reason,
+              createdBy: adminUser,
+            },
+          });
+        }
+        results.push(slot);
+      }
+      return results;
+    });
+  }
+
+  async unblockDates(dates: Date[]) {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const results = [];
+      for (const date of dates) {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existing = await tx.calendarSlot.findFirst({
+          where: {
+            date: {
+              gte: startOfDay,
+              lte: endOfDay,
+            },
+          },
+        });
+
+        if (existing) {
+          const deleted = await tx.calendarSlot.delete({
+            where: { id: existing.id },
+          });
+          results.push(deleted);
+        }
+      }
+      return results;
+    });
   }
 }
