@@ -18,13 +18,13 @@ export class ConfirmBookingFromDraftUseCase {
       update: {
         fullName: draft.fullName,
         ...(draft.phoneNumber ? { phoneNumber: draft.phoneNumber } : {}),
-        ...(draft.instagram ? { instagram: draft.instagram } : {}),
+        ...(draft.instagram ? { instagram: draft.instagram.replace(/^@+/, "") } : {}),
       },
       create: {
         fullName: draft.fullName,
         email: draft.email,
         phoneNumber: draft.phoneNumber,
-        instagram: draft.instagram,
+        instagram: draft.instagram ? draft.instagram.replace(/^@+/, "") : null,
       },
     });
 
