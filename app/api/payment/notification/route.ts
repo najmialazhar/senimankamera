@@ -78,6 +78,7 @@ export async function POST(request: Request) {
 
         const telegramService = new TelegramService();
         await telegramService.sendBookingNotification({
+          id: booking.id,
           fullName: booking.client.fullName,
           email: booking.client.email,
           phoneNumber: booking.client.phoneNumber || undefined,

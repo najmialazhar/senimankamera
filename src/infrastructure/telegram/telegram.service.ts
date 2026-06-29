@@ -8,8 +8,8 @@ export class TelegramService {
     }
   }
 
-
   async sendBookingNotification(booking: {
+    id?: string;
     fullName: string;
     email: string;
     phoneNumber?: string;
@@ -47,6 +47,7 @@ export class TelegramService {
     const message = `
 📸 <b>ADA PESANAN BARU</b> 📸
 ----------------------------------
+🆔 <b>Tracking Code / Order ID:</b> <code>${booking.id || "-"}</code>
 👤 <b>Nama Klien:</b> ${booking.fullName}
 📧 <b>Email:</b> ${booking.email}
 📞 <b>No. HP / WA:</b> ${booking.phoneNumber || "-"}
@@ -56,7 +57,7 @@ export class TelegramService {
 ⏰ <b>Waktu Acara:</b> ${booking.eventTime || "-"}
 🎉 <b>Nama Acara:</b> ${booking.eventName || "-"}
 📍 <b>Lokasi Acara:</b> ${booking.eventLocation || "-"}
-💰 <b>Uang Muka (DP):</b> ${formattedDP} <b>(TELAH DI BAYAR)</b> dari Total: ${formattedTotal}
+💰 <b>Uang Muka (DP):</b> ${formattedDP} <b>(TELAH DIBAYAR)</b> dari Total: ${formattedTotal}
 📝 <b>Catatan Vision:</b> ${booking.notes || "-"}
 ----------------------------------
 Silahkan cek Admin Dashboard di senimankamera.my.id/login
@@ -92,7 +93,8 @@ Silahkan cek Admin Dashboard di senimankamera.my.id/login
     clientName: string,
     eventName: string,
     bookingDate: Date,
-    status: string
+    status: string,
+    bookingId?: string
   ) {
     if (!this.token || !this.chatId) {
       console.log("Skipping Telegram notification because bot token or chat ID is not configured.");
@@ -122,6 +124,7 @@ Silahkan cek Admin Dashboard di senimankamera.my.id/login
     const message = `
 ${emoji} <b>STATUS BOOKING DIPERBARUI</b> ${emoji}
 ----------------------------------
+🆔 <b>Tracking Code / Order ID:</b> <code>${bookingId || "-"}</code>
 👤 <b>Nama Klien:</b> ${clientName}
 🎉 <b>Acara:</b> ${eventName || "-"}
 📅 <b>Tanggal Acara:</b> ${formattedDate}
@@ -201,5 +204,3 @@ Silahkan cek di Admin Dashboard di senimankamera.my.id/login
     }
   }
 }
-
-
