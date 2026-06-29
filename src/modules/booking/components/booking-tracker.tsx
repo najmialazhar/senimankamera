@@ -123,6 +123,9 @@ export function BookingTracker({ initialBookingId = "", initialEmail = "" }: Boo
                 />
                 <Search className="w-4 h-4 text-secondary/50 absolute left-3 top-3.5" />
               </div>
+              <p className="text-[10px] text-secondary/70 italic font-light mt-1">
+                *Kode ini tercantum pada bukti pembayaran (PDF/PNG) atau konfirmasi WhatsApp Anda.
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -140,6 +143,9 @@ export function BookingTracker({ initialBookingId = "", initialEmail = "" }: Boo
                 />
                 <Mail className="w-4 h-4 text-secondary/50 absolute left-3 top-3.5" />
               </div>
+              <p className="text-[10px] text-secondary/70 italic font-light mt-1">
+                *Gunakan alamat email yang sama seperti saat mengisi formulir pemesanan.
+              </p>
             </div>
           </div>
 
