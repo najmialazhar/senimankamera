@@ -298,11 +298,20 @@ export function BookingTracker({ initialBookingId = "", initialEmail = "" }: Boo
                 <BookingReceiptDownload booking={booking} />
               </div>
 
-              <div className="pt-4 border-t border-border/20">
+              <div className="pt-4 border-t border-border/20 space-y-3">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-left space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 block tracking-wider">
+                    📅 Pengajuan Reschedule (Jadwal Ulang)
+                  </span>
+                  <p className="text-[11px] text-secondary/80 leading-relaxed font-light">
+                    Jika Anda ingin mengajukan perubahan jadwal (reschedule), silakan hubungi admin melalui tombol di bawah ini.
+                  </p>
+                </div>
+
                 <Button
                   onClick={() => {
                     const waText = encodeURIComponent(
-                      `Halo Seniman Kamera, saya ingin koordinasi terkait pesanan saya (ID: ${booking.id}) atas nama ${booking.client.fullName}.`
+                      `Halo Seniman Kamera, saya ingin mengajukan koordinasi/reschedule terkait pesanan saya (ID: ${booking.id}) atas nama ${booking.client.fullName}.`
                     );
                     window.open(`https://wa.me/6285721598190?text=${waText}`, "_blank");
                   }}

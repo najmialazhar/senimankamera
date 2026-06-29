@@ -259,19 +259,19 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
               Apakah Anda yakin ingin membatalkan pesanan ini? Slot jadwal yang sedang dikunci akan segera dilepaskan kembali untuk umum.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 w-full">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowCancelModal(false)}
-                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none border-border order-2 sm:order-1 cursor-pointer"
+                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none border-border cursor-pointer"
               >
                 Kembali
               </Button>
               <Button
                 type="button"
                 onClick={executeCancelBooking}
-                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none font-bold text-white bg-red-600 hover:bg-red-700 order-1 sm:order-2 cursor-pointer"
+                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none font-bold text-white bg-red-600 hover:bg-red-700 cursor-pointer"
               >
                 Ya, Batalkan Sesi
               </Button>
