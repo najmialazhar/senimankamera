@@ -48,9 +48,7 @@ export class DokuService {
   }
 
   /**
-   * Menghitung Signature DOKU menggunakan HMAC-SHA256
-   * Format string to sign:
-   * Client-Id:<clientId>\nRequest-Id:<requestId>\nRequest-Timestamp:<timestamp>\nRequest-Target:<target>\nDigest:<digest>
+   * Menghitung Signature DOKU menggunakan HMAC-SHA256 untuk POST
    */
   private computeSignature(
     requestId: string,
@@ -64,6 +62,29 @@ export class DokuService {
       `Request-Timestamp:${requestTimestamp}`,
       `Request-Target:${requestTarget}`,
       `Digest:${digest}`,
+    ].join("\n");
+
+    const hmac = crypto
+      .createHmac("sha256", this.secretKey)
+      .update(stringToSign)
+      .digest("base64");
+
+    return `HMACSHA256=${hmac}`;
+  }
+
+  /**
+   * Menghitung Signature DOKU untuk GET request (tanpa body/digest)
+   */
+  private computeGetSignature(
+    requestId: string,
+    requestTimestamp: string,
+    requestTarget: string
+  ): string {
+    const stringToSign = [
+      `Client-Id:${this.clientId}`,
+      `Request-Id:${requestId}`,
+      `Request-Timestamp:${requestTimestamp}`,
+      `Request-Target:${requestTarget}`,
     ].join("\n");
 
     const hmac = crypto
@@ -141,8 +162,46 @@ export class DokuService {
   }
 
   /**
+   * Mengecek status transaksi secara aktif langsung ke API DOKU (Inquiry Status API).
+   * Mengembalikan "SUCCESS", "FAILED", "EXPIRED", "PENDING", atau null jika error.
+   */
+  async checkTransactionStatus(invoiceNumber: string): Promise<string | null> {
+    try {
+      const requestTarget = `/orders/v1/status/${invoiceNumber}`;
+      const requestId = crypto.randomUUID();
+      const requestTimestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+
+      const signature = this.computeGetSignature(
+        requestId,
+        requestTimestamp,
+        requestTarget
+      );
+
+      const response = await fetch(`${this.baseUrl}${requestTarget}`, {
+        method: "GET",
+        headers: {
+          "Client-Id": this.clientId,
+          "Request-Id": requestId,
+          "Request-Timestamp": requestTimestamp,
+          Signature: signature,
+        },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+      const status = data?.transaction?.status || data?.order?.status || null;
+      return status as string | null;
+    } catch (err) {
+      console.error(`Failed to check DOKU status for ${invoiceNumber}:`, err);
+      return null;
+    }
+  }
+
+  /**
    * Memverifikasi signature webhook dari DOKU.
-   * Gunakan rawBody (string mentah) untuk menghitung Digest agar tidak terjadi perubahan whitespace.
    */
   verifyWebhookSignature(
     headers: Record<string, string | string[] | undefined>,
@@ -171,13 +230,11 @@ export class DokuService {
         return false;
       }
 
-      // Hitung digest dari raw body
       const digest = crypto
         .createHash("sha256")
         .update(rawBody)
         .digest("base64");
 
-      // Coba target dari header DOKU jika tersedia, atau gunakan requestTarget
       const targetToUse = headerTarget || requestTarget;
 
       const expectedSignature = this.computeSignature(
@@ -194,7 +251,6 @@ export class DokuService {
         return true;
       }
 
-      // Fallback jika DOKU mengirimkan target alternatif tanpa query string
       if (targetToUse !== requestTarget) {
         const altSignature = this.computeSignature(
           requestId,
