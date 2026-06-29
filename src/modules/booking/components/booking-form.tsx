@@ -283,9 +283,9 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
         });
         setActivePaymentUrl(paymentUrl || "");
 
-        // Redirect ke halaman menunggu pembayaran (/book/pending)
+        // Redirect langsung ke portal pembayaran DOKU (1 Tab)
         if (paymentUrl) {
-          router.push(`/book/pending?order_id=${bookingData.id}&payment_url=${encodeURIComponent(paymentUrl)}`);
+          window.location.href = paymentUrl;
         } else {
           setServerError("Gagal mendapatkan halaman pembayaran. Silakan coba lagi.");
         }

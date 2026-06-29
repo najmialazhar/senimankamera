@@ -49,8 +49,8 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
         if (res.success && res.data) {
           // Pembayaran SUCCESS! Webhook DOKU telah memverifikasi & memindahkan ke database permanen.
           router.push(`/book/success?order_id=${orderId}`);
-        } else if (res.isPendingPayment && res.draftData) {
-          setDraftInfo(res.draftData);
+        } else if (res.isPendingPayment && (res as any).draftData) {
+          setDraftInfo((res as any).draftData);
           setIsCheckingStatus(false);
         } else {
           setIsCheckingStatus(false);
