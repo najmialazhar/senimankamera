@@ -140,7 +140,7 @@ export class InitiateBookingDraftUseCase {
         customerPhone: parsed.phoneNumber || undefined,
         itemName: `DP - ${targetPackage?.name || parsed.packageType}`,
         paymentDueMinutes: 20,
-        callbackUrl: baseUrl ? `${baseUrl}/book/success?order_id=${tempOrderId}` : undefined,
+        callbackUrl: baseUrl ? `${baseUrl}/book/pending?order_id=${tempOrderId}` : undefined,
       });
       paymentUrl = dokuResult.paymentUrl;
     } catch (err) {
