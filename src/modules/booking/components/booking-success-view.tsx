@@ -188,7 +188,7 @@ export function BookingSuccessView({ booking }: BookingSuccessViewProps) {
         {/* Locked / Unlocked Navigation Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
           <Button 
-            onClick={() => router.push("/portfolio")}
+            onClick={() => router.push(`/track?code=${booking.id}`)}
             disabled={!hasClickedWa}
             variant="outline"
             className={cn(
@@ -200,7 +200,7 @@ export function BookingSuccessView({ booking }: BookingSuccessViewProps) {
             title={!hasClickedWa ? "Klik WhatsApp Konfirmasi untuk membuka kunci" : ""}
           >
             {!hasClickedWa ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5 text-green-600" />}
-            Lihat Portofolio
+            Lacak Pesanan
           </Button>
 
           <Button 
