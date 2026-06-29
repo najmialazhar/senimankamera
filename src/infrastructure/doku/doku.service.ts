@@ -150,7 +150,6 @@ export class DokuService {
     requestTarget: string
   ): boolean {
     try {
-      // Ambil header DOKU — header bisa berupa lowercase atau mixed-case
       const getHeader = (name: string): string => {
         const lower = name.toLowerCase();
         for (const [key, value] of Object.entries(headers)) {
@@ -165,6 +164,7 @@ export class DokuService {
       const requestId = getHeader("request-id");
       const requestTimestamp = getHeader("request-timestamp");
       const receivedSignature = getHeader("signature");
+      const headerTarget = getHeader("request-target");
 
       if (!clientId || !requestId || !requestTimestamp || !receivedSignature) {
         console.warn("DOKU webhook: Missing required headers for signature verification.");
@@ -177,23 +177,39 @@ export class DokuService {
         .update(rawBody)
         .digest("base64");
 
-      // Rekonstruksi string to sign
+      // Coba target dari header DOKU jika tersedia, atau gunakan requestTarget
+      const targetToUse = headerTarget || requestTarget;
+
       const expectedSignature = this.computeSignature(
         requestId,
         requestTimestamp,
-        requestTarget,
+        targetToUse,
         digest
       );
 
-      // Constant-time comparison untuk mencegah timing attack
       const receivedBuffer = Buffer.from(receivedSignature);
       const expectedBuffer = Buffer.from(expectedSignature);
 
-      if (receivedBuffer.length !== expectedBuffer.length) {
-        return false;
+      if (receivedBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(receivedBuffer, expectedBuffer)) {
+        return true;
       }
 
-      return crypto.timingSafeEqual(receivedBuffer, expectedBuffer);
+      // Fallback jika DOKU mengirimkan target alternatif tanpa query string
+      if (targetToUse !== requestTarget) {
+        const altSignature = this.computeSignature(
+          requestId,
+          requestTimestamp,
+          requestTarget,
+          digest
+        );
+        const altBuffer = Buffer.from(altSignature);
+        if (receivedBuffer.length === altBuffer.length && crypto.timingSafeEqual(receivedBuffer, altBuffer)) {
+          return true;
+        }
+      }
+
+      console.warn(`DOKU signature mismatch for Client-Id ${clientId}. Expected: ${expectedSignature}, Received: ${receivedSignature}`);
+      return false;
     } catch (err) {
       console.error("DOKU webhook signature verification failed:", err);
       return false;
