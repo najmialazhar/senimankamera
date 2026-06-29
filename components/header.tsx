@@ -27,7 +27,7 @@ export function Header() {
     { name: "Beranda", href: "/" },
     { name: "Portofolio", href: "/portfolio" },
     { name: "Layanan", href: "/services" },
-    { name: "Testimonial", href: "/testimonials" },
+    { name: "Informasi Harga", href: "/pricing" },
     { name: "Lacak Pesanan", href: "/track" },
     { name: "Kontak", href: "/contact" },
   ];

@@ -63,8 +63,11 @@ export function PortfolioGrid({ initialItems, categories: dbCategories }: Portfo
         <h1 className="font-serif text-4xl md:text-6xl text-primary mb-4 font-medium">
           Karya Pilihan
         </h1>
-        <p className="font-sans text-base md:text-lg text-secondary font-light leading-relaxed">
+        <p className="font-sans text-base md:text-lg text-secondary font-light leading-relaxed mb-4">
           Koleksi momen berharga yang diabadikan melalui lensa, memadukan keindahan cahaya dan emosi dalam gaya editorial yang elegan.
+        </p>
+        <p className="font-sans text-xs text-secondary/70 italic font-light max-w-lg">
+          *Harap maklum jika kualitas foto di web tidak setajam berkas asli demi kecepatan akses halaman.
         </p>
       </section>
 

@@ -137,6 +137,9 @@ export default async function HomePage() {
             <h2 className="font-serif text-3xl md:text-5xl text-primary font-medium">
               Koleksi Pilihan
             </h2>
+            <p className="text-[11px] md:text-xs text-secondary/70 italic font-light mt-2 max-w-xl">
+              *Harap maklum jika kualitas foto di web tidak setajam berkas asli demi kecepatan akses halaman.
+            </p>
           </div>
           <Link
             href="/portfolio"
