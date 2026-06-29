@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, ShieldCheck, ExternalLink, XCircle, Clock, CheckCircle2 } from "lucide-react";
+import { Loader2, ShieldCheck, ExternalLink, XCircle, Clock, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getBookingByIdAction } from "../actions/get-booking-by-id.action";
 import { cancelDraftBookingAction } from "../actions/cancel-draft-booking.action";
@@ -21,6 +21,7 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSimulatingDev, setIsSimulatingDev] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [draftInfo, setDraftInfo] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -47,7 +48,6 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
         if (!isMounted) return;
 
         if (res.success && res.data) {
-          // Pembayaran SUCCESS! Webhook DOKU telah memverifikasi & memindahkan ke database permanen.
           router.push(`/book/success?order_id=${orderId}`);
         } else if (res.isPendingPayment && (res as any).draftData) {
           setDraftInfo((res as any).draftData);
@@ -61,10 +61,7 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
       }
     };
 
-    // Panggil langsung saat pertama kali
     checkStatus();
-
-    // Set interval polling setiap 3 detik
     const interval = setInterval(checkStatus, 3000);
 
     return () => {
@@ -79,17 +76,16 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
     }
   };
 
-  const handleCancelBooking = async () => {
-    if (confirm("Apakah Anda yakin ingin membatalkan pesanan ini? Slot jadwal akan dilepaskan kembali.")) {
-      setIsCancelling(true);
-      try {
-        await cancelDraftBookingAction(orderId);
-        sessionStorage.removeItem(`doku_opened_${orderId}`);
-        router.push("/services");
-      } catch (err: any) {
-        setErrorMessage(err.message || "Gagal membatalkan pesanan.");
-        setIsCancelling(false);
-      }
+  const executeCancelBooking = async () => {
+    setShowCancelModal(false);
+    setIsCancelling(true);
+    try {
+      await cancelDraftBookingAction(orderId);
+      sessionStorage.removeItem(`doku_opened_${orderId}`);
+      router.push("/services");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Gagal membatalkan pesanan.");
+      setIsCancelling(false);
     }
   };
 
@@ -110,7 +106,7 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto py-12 px-6 font-sans">
+    <div className="w-full max-w-2xl mx-auto py-12 px-6 font-sans relative">
       <div className="border border-border/40 bg-card p-8 md:p-10 shadow-xl space-y-8 text-center relative overflow-hidden">
         {/* Status Header */}
         <div className="flex flex-col items-center justify-center space-y-4">
@@ -213,7 +209,7 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
           <Button
             type="button"
             variant="outline"
-            onClick={handleCancelBooking}
+            onClick={() => setShowCancelModal(true)}
             disabled={isCancelling || isSimulatingDev}
             className="w-full font-sans text-xs uppercase tracking-widest py-6 rounded-none border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 cursor-pointer flex items-center justify-center gap-2 font-semibold"
           >
@@ -237,6 +233,52 @@ export function BookingPendingView({ orderId, paymentUrl }: BookingPendingViewPr
           <span>Transaksi aman dan terenkripsi melalui DOKU Payment Gateway</span>
         </div>
       </div>
+
+      {/* Modal Konfirmasi Pembatalan Custom Luxury */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-card border border-border/60 max-w-md w-full p-6 md:p-8 space-y-6 relative shadow-2xl text-left rounded-none">
+            <button
+              onClick={() => setShowCancelModal(false)}
+              className="absolute top-4 right-4 text-secondary hover:text-primary transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-none bg-red-500/10 border border-red-500/30 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-widest font-bold text-red-600">Konfirmasi Pembatalan</span>
+                <h3 className="font-serif text-xl font-medium text-primary">Batalkan Sesi Booking?</h3>
+              </div>
+            </div>
+
+            <p className="font-sans text-xs text-secondary font-light leading-relaxed">
+              Apakah Anda yakin ingin membatalkan pesanan ini? Slot jadwal yang sedang dikunci akan segera dilepaskan kembali untuk umum.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCancelModal(false)}
+                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none border-border order-2 sm:order-1 cursor-pointer"
+              >
+                Kembali
+              </Button>
+              <Button
+                type="button"
+                onClick={executeCancelBooking}
+                className="w-full font-sans text-xs uppercase tracking-widest py-5 rounded-none font-bold text-white bg-red-600 hover:bg-red-700 order-1 sm:order-2 cursor-pointer"
+              >
+                Ya, Batalkan Sesi
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
