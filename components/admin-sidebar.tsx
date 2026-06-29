@@ -18,6 +18,7 @@ import {
   ChevronDown,
   History,
   Users,
+  Video,
 } from "lucide-react";
 import {
   Sidebar,
@@ -100,6 +101,7 @@ export function AdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>)
     { name: "Kategori", href: "/admin/categories", icon: Tag, roles: ["SUPER_ADMIN", "ADMIN_CMS"] },
     { name: "Paket", href: "/admin/packages", icon: Settings, roles: ["SUPER_ADMIN", "ADMIN_CMS"] },
     { name: "Testimoni", href: "/admin/testimonials", icon: MessageSquare, roles: ["SUPER_ADMIN", "ADMIN_CMS"] },
+    { name: "Video Showcase", href: "/admin/video", icon: Video, roles: ["SUPER_ADMIN", "ADMIN_CMS"] },
     { name: "Pengaturan S&K", href: "/admin/settings", icon: FileText, roles: ["SUPER_ADMIN", "ADMIN_CMS"] },
   ];
 

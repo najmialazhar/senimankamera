@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { initiateDraftBookingAction } from "../actions/initiate-draft-booking.action";
 import { getBookedDatesWithInfoAction } from "../actions/get-booked-dates-with-info.action";
@@ -55,9 +55,22 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLDivElement>(null);
 
   // Wizard Step
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Auto scroll to top of form when step changes
+  useEffect(() => {
+    if (formRef.current) {
+      const rect = formRef.current.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const targetY = rect.top + scrollTop - 80; // offset untuk header
+      window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [currentStep]);
 
   // Form Inputs
   const [packageType, setPackageType] = useState("");
@@ -290,7 +303,7 @@ export function BookingForm({ initialPackages, categories, bookedDatesInfo }: Bo
   ];
 
   return (
-    <div className="w-full max-w-3xl mx-auto border border-border/40 bg-card p-6 md:p-10 relative">
+    <div ref={formRef} className="w-full max-w-3xl mx-auto border border-border/40 bg-card p-6 md:p-10 relative">
       {/* Stepper Progress */}
       <div className="mb-10 max-w-lg mx-auto">
         <div className="flex items-center justify-between relative">

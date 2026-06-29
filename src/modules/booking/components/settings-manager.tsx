@@ -59,7 +59,7 @@ export function SettingsManager({
                 Pengaturan S&K
               </h2>
               <p className="font-sans text-sm text-secondary font-light">
-                Kelola teks Syarat & Ketentuan yang akan ditampilkan ke klien sebelum pembayaran.
+                Kelola teks Syarat & Ketentuan yang akan ditampilkan ke klien sebelum pembayaran DP.
               </p>
             </div>
           </div>

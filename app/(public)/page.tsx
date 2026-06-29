@@ -5,17 +5,27 @@ import { prisma } from "@/src/infrastructure/prisma/client";
 import { FeaturedCollections } from "@/src/modules/gallery/components/featured-collections";
 import { FeaturedTestimonials } from "@/src/modules/gallery/components/featured-testimonials";
 import { TestimonialRepository } from "@/src/modules/gallery/repositories/testimonial.repository";
+import { getHomepageVideoAction } from "@/src/modules/booking/actions/get-homepage-video.action";
+import { YouTubeDisplayer } from "@/components/youtube-displayer";
 
 export const revalidate = 0;
 
 export default async function HomePage() {
   let latestGalleries = [];
   let testimonials = [];
+  let showcaseData = {
+    youtubeUrl: "",
+    tagline: "Showcase Studio",
+    title: "Intensional. Tenang. Abadi.",
+    description1: "Pendekatan kami berakar pada observasi, bukan orkestrasi. Kami percaya bahwa gambar yang paling kuat lahir dari interaksi yang jujur, bukan pose yang dipaksakan. Dengan menjaga kehadiran yang tenang dan tidak mengganggu, kami membiarkan keindahan alami kisah Anda mengalir.",
+    description2: "Saksikan visualisasi cerita karya kami melalui video dokumentasi di samping, yang dikomposisikan dan dikurasi secara estetik demi hasil yang abadi.",
+    aspectRatio: "PORTRAIT" as "PORTRAIT" | "LANDSCAPE" | "SQUARE",
+  };
   let isDbError = false;
 
   try {
     const testimonialRepo = new TestimonialRepository();
-    const [resGalleries, resTestimonials] = await Promise.all([
+    const [resGalleries, resTestimonials, videoRes] = await Promise.all([
       prisma.gallery.findMany({
         where: {
           mediaType: "image",
@@ -26,9 +36,16 @@ export default async function HomePage() {
         take: 6,
       }),
       testimonialRepo.findAll(),
+      getHomepageVideoAction(),
     ]);
     latestGalleries = resGalleries;
     testimonials = resTestimonials;
+    if (videoRes.success && videoRes.data) {
+      showcaseData = {
+        ...showcaseData,
+        ...videoRes.data,
+      };
+    }
   } catch (error) {
     console.error("Prisma error during home page generation:", error);
     isDbError = true;
@@ -71,33 +88,41 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Philosophy Section */}
+      {/* Dynamic YouTube Video Showcase Section (Dinamis CMS) */}
       <section className="py-24 md:py-32 px-6 md:px-20 max-w-[1440px] mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-center">
-          <div className="md:col-span-6 lg:col-span-5 md:col-start-2">
-            <span className="font-sans text-[10px] uppercase tracking-widest text-secondary block mb-4 font-bold">
-              Etos Kami
-            </span>
-            <h2 className="font-serif text-3xl md:text-4xl text-primary mb-6 font-medium">
-              Intensional. Tenang. Abadi.
-            </h2>
-            <p className="font-sans text-base md:text-lg text-secondary mb-6 font-light leading-relaxed">
-              Pendekatan kami berakar pada observasi, bukan orkestrasi. Kami percaya bahwa gambar yang paling kuat lahir dari interaksi yang jujur, bukan pose yang dipaksakan. Dengan menjaga kehadiran yang tenang dan tidak mengganggu, kami membiarkan keindahan alami kisah Anda mengalir, menangkap momen yang terasa sangat otentik dan bernilai seni tinggi.
-            </p>
-            <p className="font-sans text-base md:text-lg text-secondary font-light leading-relaxed">
-              Setiap bingkai diperlakukan sebagai karya seni murni, dikomposisikan dan diedit dengan cermat untuk memastikan estetika editorial yang kohesif dan akan bertahan selama beberapa dekade.
-            </p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          <div className="lg:col-span-5">
+            {showcaseData.tagline && (
+              <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-secondary block mb-4 font-bold">
+                {showcaseData.tagline}
+              </span>
+            )}
+            {showcaseData.title && (
+              <h2 className="font-serif text-3xl md:text-5xl text-primary mb-6 font-medium leading-tight">
+                {showcaseData.title}
+              </h2>
+            )}
+            {showcaseData.description1 && (
+              <p className="font-sans text-base md:text-lg text-secondary mb-6 font-light leading-relaxed">
+                {showcaseData.description1}
+              </p>
+            )}
+            {showcaseData.description2 && (
+              <p className="font-sans text-base md:text-lg text-secondary font-light leading-relaxed mb-8">
+                {showcaseData.description2}
+              </p>
+            )}
+            <Link
+              href="/services"
+              className="inline-flex items-center gap-3 border-b border-primary pb-1 font-sans text-xs uppercase tracking-widest font-bold text-primary hover:opacity-80 transition-opacity"
+            >
+              <span>Lihat Layanan Kami</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-          <div className="md:col-span-5 md:col-start-8">
-            <div className="aspect-[3/4] overflow-hidden bg-muted relative group border border-border/40">
-              <Image
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7TrLGopM5nDCga32v2aev2V_AzsZGQobWWhdNhxg7mNfRiPV0PAwfAcmhloMkRLj8IDuIGKRV2I3reKSt5271erYU-haGMrUtibOR14MBJjJFq2z6p2mKeRgnTlaokDyAwZqA7sA0i4ZVU7Ejmexgle-XXIxlxUOi__uXwqEsj5rLfNnAj2WxAIaUGXV2HNP3Pzq1aq69DysPrkz1kb3vyf6amCPyLDo0jIxvPzDFbJdo2HlwYxGF0RxRKY62yO2S-LDQ3DhDZntk"
-                alt="Detail shot"
-                fill
-                sizes="(max-width: 768px) 100vw, 40vw"
-                className="object-cover transition-transform duration-[2s] group-hover:scale-105"
-              />
-            </div>
+
+          <div className="lg:col-span-7">
+            <YouTubeDisplayer youtubeUrl={showcaseData.youtubeUrl} aspectRatio={showcaseData.aspectRatio} />
           </div>
         </div>
       </section>
@@ -139,7 +164,7 @@ export default async function HomePage() {
               Pengalaman Klien
             </span>
             <h2 className="font-serif text-3xl md:text-5xl text-primary font-medium">
-              Kisah & Kesan Mereka
+              Kata Mereka
             </h2>
           </div>
           <Link
@@ -150,14 +175,24 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        {/* Testimonials Slider Row */}
-        {displayTestimonials.length > 0 ? (
-          <FeaturedTestimonials items={displayTestimonials} />
-        ) : (
-          <div className="max-w-[1440px] mx-auto px-6 md:px-20 text-center py-16 text-secondary/60 font-sans text-sm border border-dashed border-border/30 rounded bg-muted/10">
-            Belum ada testimoni klien.
-          </div>
-        )}
+        <FeaturedTestimonials items={displayTestimonials} />
+      </section>
+
+      {/* Call to Action Section */}
+      <section className="py-24 md:py-32 px-6 md:px-20 max-w-[1440px] mx-auto text-center border-t border-border/20">
+        <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-secondary mb-4 block font-bold">
+          Abadikan Kisah Anda
+        </span>
+        <h2 className="font-serif text-4xl md:text-6xl text-primary mb-8 font-medium max-w-2xl mx-auto leading-tight">
+          Siap Membuat Momen Abadi Bersama Kami?
+        </h2>
+        <Link
+          href="/book"
+          className="inline-flex items-center gap-3 bg-primary text-primary-foreground px-8 py-4 uppercase tracking-widest font-sans text-xs font-bold hover:bg-primary/90 transition-colors"
+        >
+          <span>Pesan Sesi Foto</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </section>
     </div>
   );

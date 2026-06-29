@@ -5,9 +5,20 @@ import pg from "pg";
 const globalForPrisma = globalThis as unknown as {
   prisma: any | undefined;
   pool: pg.Pool | undefined;
+  connectionString: string | undefined;
 };
 
 const connectionString = process.env.DATABASE_URL;
+
+// Reset pool & prisma instance if connectionString changes in development
+if (process.env.NODE_ENV !== "production" && globalForPrisma.connectionString !== connectionString) {
+  if (globalForPrisma.pool) {
+    globalForPrisma.pool.end().catch(() => {});
+    globalForPrisma.pool = undefined;
+  }
+  globalForPrisma.prisma = undefined;
+  globalForPrisma.connectionString = connectionString;
+}
 
 // Re-use pg Pool in development to prevent dangling database connection leaks on Fast Refresh
 let pool: pg.Pool;
