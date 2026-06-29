@@ -18,7 +18,8 @@ import {
   AlertCircle,
   HelpCircle,
   Eye,
-  Info
+  Info,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { updateBookingStatusAction } from "@/src/modules/booking/actions/update-booking-status.action";
 import { rescheduleBookingAction } from "@/src/modules/booking/actions/reschedule-booking.action";
+import { deleteBookingAction } from "@/src/modules/booking/actions/delete-bookings.action";
 import { useModal } from "@/components/modal-provider";
 import { toast } from "sonner";
 
@@ -106,6 +108,38 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
   const [isLunasConfirmOpen, setIsLunasConfirmOpen] = useState(false);
   const [lunasConfirmInput, setLunasConfirmInput] = useState("");
   const [lunasBookingId, setLunasBookingId] = useState<string | null>(null);
+
+  const [isSingleDeleteConfirmOpen, setIsSingleDeleteConfirmOpen] = useState(false);
+  const [singleDeleteConfirmInput, setSingleDeleteConfirmInput] = useState("");
+  const [deleteBookingTarget, setDeleteBookingTarget] = useState<Booking | null>(null);
+
+  const openDeleteModal = (booking: Booking) => {
+    setDeleteBookingTarget(booking);
+    setSingleDeleteConfirmInput("");
+    setIsSingleDeleteConfirmOpen(true);
+  };
+
+  const executeSingleDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deleteBookingTarget || singleDeleteConfirmInput !== "Delete") {
+      toast.error("Konfirmasi kata kunci salah. Ketik 'Delete'.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await deleteBookingAction(deleteBookingTarget.id);
+      if (res.success) {
+        setBookings((prev) => prev.filter((b) => b.id !== deleteBookingTarget.id));
+        setIsSingleDeleteConfirmOpen(false);
+        setIsDetailOpen(false);
+        setDeleteBookingTarget(null);
+        setSingleDeleteConfirmInput("");
+        toast.success("Pesanan berhasil dihapus permanen.");
+      } else {
+        toast.error(res.error || "Gagal menghapus pesanan.");
+      }
+    });
+  };
 
   // Extract unique years from booking dates
   const uniqueYears = Array.from(
@@ -497,6 +531,18 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                         </>
                       )}
 
+                      {(booking.status === "LUNAS" || booking.status === "PAID" || booking.status === "COMPLETED") && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => openDeleteModal(booking)}
+                          className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-100"
+                          title="Hapus Pesanan Lunas"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+
                       {booking.status !== "CANCELLED" && booking.status !== "REJECTED" && (
                         <Button
                           variant="outline"
@@ -710,6 +756,16 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                 </>
               )}
 
+              {(selectedBooking.status === "LUNAS" || selectedBooking.status === "PAID" || selectedBooking.status === "COMPLETED") && (
+                <Button
+                  onClick={() => openDeleteModal(selectedBooking)}
+                  variant="destructive"
+                  className="rounded-none font-sans text-xs uppercase tracking-wider py-5 font-bold bg-rose-600 hover:bg-rose-700"
+                >
+                  Hapus Pesanan
+                </Button>
+              )}
+
               {selectedBooking.status !== "CANCELLED" && selectedBooking.status !== "REJECTED" && (
                 <Button
                   onClick={() => {
@@ -844,6 +900,62 @@ export function BookingsClient({ initialBookings, initialStatusFilter }: Booking
                   className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-sans text-xs uppercase tracking-wider py-4"
                 >
                   {isPending ? "Memproses..." : "Konfirmasi Lunas"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+      {/* SINGLE DELETE CONFIRMATION DIALOG (Requires typing "Delete") */}
+      {isSingleDeleteConfirmOpen && deleteBookingTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md rounded-none border-border/40 shadow-2xl bg-background text-foreground animate-in zoom-in-95 duration-200">
+            <CardHeader className="border-b border-border/20 pb-4">
+              <CardTitle className="font-serif text-lg text-rose-600 font-medium flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+                Konfirmasi Hapus Pesanan
+              </CardTitle>
+              <CardDescription className="font-sans text-xs">
+                PERINGATAN: Menghapus pesanan #{deleteBookingTarget.id} akan menghapus seluruh data transaksi secara permanen dari database.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={executeSingleDelete}>
+              <CardContent className="py-6 space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="singleDeleteConfirmInput" className="text-xs font-semibold text-secondary">
+                    Ketik <span className="font-bold text-rose-600">Delete</span> untuk memverifikasi penghapusan ini:
+                  </label>
+                  <Input
+                    type="text"
+                    id="singleDeleteConfirmInput"
+                    placeholder='Ketik "Delete" disini'
+                    value={singleDeleteConfirmInput}
+                    onChange={(e) => setSingleDeleteConfirmInput(e.target.value)}
+                    required
+                    className="rounded-none border-border/40 text-xs py-5"
+                    autoComplete="off"
+                  />
+                </div>
+              </CardContent>
+              <div className="border-t border-border/20 px-6 py-4 flex justify-end gap-2 bg-neutral-50 dark:bg-neutral-900">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsSingleDeleteConfirmOpen(false);
+                    setDeleteBookingTarget(null);
+                    setSingleDeleteConfirmInput("");
+                  }}
+                  className="rounded-none border-border font-sans text-xs uppercase tracking-wider py-4"
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending || singleDeleteConfirmInput !== "Delete"}
+                  className="bg-rose-600 hover:bg-rose-700 text-white rounded-none font-sans text-xs uppercase tracking-wider py-4 font-bold"
+                >
+                  {isPending ? "Hapus..." : "Hapus Permanen"}
                 </Button>
               </div>
             </form>

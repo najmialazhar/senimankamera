@@ -139,23 +139,40 @@ export function HistoryClient({ initialBookings, categoryLabels }: HistoryClient
     setSelectedIds(newSelected);
   };
 
-  const handleSingleDelete = async (id: string) => {
-    const isConfirmed = await confirm("Apakah Anda yakin ingin menghapus permanen riwayat pesanan ini?");
-    if (!isConfirmed) return;
+  // Single delete states
+  const [singleDeleteTarget, setSingleDeleteTarget] = useState<Booking | null>(null);
+  const [isSingleDeleteModalOpen, setIsSingleDeleteModalOpen] = useState(false);
+  const [singleDeleteConfirmInput, setSingleDeleteConfirmInput] = useState("");
+
+  const openSingleDeleteModal = (booking: Booking) => {
+    setSingleDeleteTarget(booking);
+    setSingleDeleteConfirmInput("");
+    setIsSingleDeleteModalOpen(true);
+  };
+
+  const executeSingleDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!singleDeleteTarget || singleDeleteConfirmInput !== "Delete") {
+      toast.error("Konfirmasi kata kunci salah. Ketik 'Delete'.");
+      return;
+    }
 
     startTransition(async () => {
-      const res = await deleteBookingAction(id);
+      const res = await deleteBookingAction(singleDeleteTarget.id);
       if (res.success) {
-        setBookings((prev) => prev.filter((b) => b.id !== id));
+        setBookings((prev) => prev.filter((b) => b.id !== singleDeleteTarget.id));
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          next.delete(id);
+          next.delete(singleDeleteTarget.id);
           return next;
         });
-        if (selectedBooking?.id === id) {
+        if (selectedBooking?.id === singleDeleteTarget.id) {
           setSelectedBooking(null);
           setIsDetailOpen(false);
         }
+        setIsSingleDeleteModalOpen(false);
+        setSingleDeleteTarget(null);
+        setSingleDeleteConfirmInput("");
         toast.success("Riwayat pesanan berhasil dihapus.");
       } else {
         toast.error(res.error || "Gagal menghapus riwayat pesanan.");
@@ -394,7 +411,7 @@ export function HistoryClient({ initialBookings, categoryLabels }: HistoryClient
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleSingleDelete(booking.id)}
+                        onClick={() => openSingleDeleteModal(booking)}
                         disabled={isPending}
                         className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                         title="Hapus Permanen"
@@ -554,10 +571,10 @@ export function HistoryClient({ initialBookings, categoryLabels }: HistoryClient
 
             <div className="border-t border-border/20 pt-6 flex justify-end">
               <Button
-                onClick={() => handleSingleDelete(selectedBooking.id)}
+                onClick={() => openSingleDeleteModal(selectedBooking)}
                 disabled={isPending}
                 variant="destructive"
-                className="rounded-none font-sans text-xs uppercase tracking-wider py-5"
+                className="rounded-none font-sans text-xs uppercase tracking-wider py-5 font-bold bg-rose-600 hover:bg-rose-700"
               >
                 Hapus Permanen
               </Button>
@@ -613,6 +630,62 @@ export function HistoryClient({ initialBookings, categoryLabels }: HistoryClient
                   className="rounded-none font-sans text-xs uppercase tracking-wider py-4"
                 >
                   {isPending ? "Menghapus..." : "Hapus Permanen"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+      {/* SINGLE DELETE CONFIRMATION DIALOG */}
+      {isSingleDeleteModalOpen && singleDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <Card className="w-full max-w-md rounded-none border-border/40 shadow-2xl bg-background text-foreground animate-in zoom-in-95 duration-200">
+            <CardHeader className="border-b border-border/20 pb-4">
+              <CardTitle className="font-serif text-lg text-rose-600 font-medium flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+                Konfirmasi Hapus Pesanan
+              </CardTitle>
+              <CardDescription className="font-sans text-xs">
+                PERINGATAN: Menghapus pesanan #{singleDeleteTarget.id} akan menghapus seluruh data secara permanen dari database.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={executeSingleDelete}>
+              <CardContent className="py-6 space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="singleDeleteInput" className="text-xs font-semibold text-secondary">
+                    Ketik <span className="font-bold text-rose-600">Delete</span> untuk memverifikasi penghapusan ini:
+                  </label>
+                  <Input
+                    type="text"
+                    id="singleDeleteInput"
+                    placeholder='Ketik "Delete" disini'
+                    value={singleDeleteConfirmInput}
+                    onChange={(e) => setSingleDeleteConfirmInput(e.target.value)}
+                    required
+                    className="rounded-none border-border/40 text-xs py-5"
+                    autoComplete="off"
+                  />
+                </div>
+              </CardContent>
+              <div className="border-t border-border/20 px-6 py-4 flex justify-end gap-2 bg-neutral-50 dark:bg-neutral-900">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsSingleDeleteModalOpen(false);
+                    setSingleDeleteTarget(null);
+                    setSingleDeleteConfirmInput("");
+                  }}
+                  className="rounded-none border-border font-sans text-xs uppercase tracking-wider py-4"
+                >
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending || singleDeleteConfirmInput !== "Delete"}
+                  className="bg-rose-600 hover:bg-rose-700 text-white rounded-none font-sans text-xs uppercase tracking-wider py-4 font-bold"
+                >
+                  {isPending ? "Hapus..." : "Hapus Permanen"}
                 </Button>
               </div>
             </form>
