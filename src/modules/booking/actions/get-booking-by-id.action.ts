@@ -2,7 +2,7 @@
 
 import { BookingRepository } from "../repositories/booking.repository";
 import { BookingDraftRepository } from "../repositories/booking-draft.repository";
-import { DokuService } from "@/src/infrastructure/doku/doku.service";
+import { ConfirmBookingFromDraftUseCase } from "../use-cases/confirm-booking-from-draft.use-case";
 
 const activeTelegramSentSet = new Set<string>();
 
@@ -11,50 +11,32 @@ export async function getBookingByIdAction(id: string) {
     const repository = new BookingRepository();
     let booking = await repository.findBookingById(id);
 
-    // Jika booking belum ada di tabel utama, lakukan Active Inquiry ke API DOKU secara langsung
+    // Jika booking belum ada di tabel utama, lakukan pengecekan draft
     if (!booking) {
       const draftRepo = new BookingDraftRepository();
       const draft = await draftRepo.findDraftById(id);
 
       if (draft) {
-        try {
-          const dokuService = new DokuService();
-          const dokuStatus = await dokuService.checkTransactionStatus(id);
-
-          if (dokuStatus === "SUCCESS") {
-            const { ConfirmBookingFromDraftUseCase } = await import("../use-cases/confirm-booking-from-draft.use-case");
-            const confirmUseCase = new ConfirmBookingFromDraftUseCase(draftRepo);
-            booking = await confirmUseCase.execute(id);
-          } else if (dokuStatus === "FAILED" || dokuStatus === "EXPIRED" || dokuStatus === "REVERSED") {
-            await draftRepo.deleteDraft(id).catch(() => {});
-            return {
-              success: false,
-              isPendingPayment: false,
-              error: `Pembayaran ${dokuStatus}. Slot jadwal telah dilepaskan.`,
-            };
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[DEV ONLY] Simulating webhook: Confirming booking from draft for ID: ${id}`);
+          const confirmUseCase = new ConfirmBookingFromDraftUseCase(draftRepo);
+          const confirmedBooking = await confirmUseCase.execute(id);
+          if (confirmedBooking) {
+            booking = confirmedBooking;
           }
-        } catch (e) {
-          console.error("DOKU active status inquiry check error:", e);
+        } else {
+          return {
+            success: false,
+            isPendingWebhook: true,
+            error: "Sedang memverifikasi pembayaran Anda. Halaman ini akan memuat ulang secara otomatis...",
+          };
         }
       }
     }
 
     if (!booking) {
-      const draftRepo = new BookingDraftRepository();
-      const draft = await draftRepo.findDraftById(id);
-
-      if (draft) {
-        return {
-          success: false,
-          isPendingPayment: true,
-          error: "Pembayaran belum dikonfirmasi oleh DOKU.",
-          draftData: JSON.parse(JSON.stringify(draft)),
-        };
-      }
-
       return {
         success: false,
-        isPendingPayment: false,
         error: "Booking tidak ditemukan.",
       };
     }
@@ -84,6 +66,7 @@ export async function getBookingByIdAction(id: string) {
           dpAmount: booking.dpAmount || undefined,
           totalAmount: booking.totalAmount || undefined,
         });
+        console.log(`Telegram notification sent for ID: ${booking.id}`);
       } catch (e) {
         console.error("Failed to send Telegram notification in active status check:", e);
       }
@@ -106,14 +89,12 @@ export async function getBookingByIdAction(id: string) {
 
     return {
       success: true,
-      isPendingPayment: false,
       data: bookingJson,
     };
   } catch (error: any) {
     console.error("getBookingByIdAction error:", error);
     return {
       success: false,
-      isPendingPayment: false,
       error: error instanceof Error ? error.message : "Terjadi kesalahan server.",
     };
   }
