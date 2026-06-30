@@ -3,6 +3,7 @@
 import { BookingRepository } from "../repositories/booking.repository";
 import { BookingDraftRepository } from "../repositories/booking-draft.repository";
 import { ConfirmBookingFromDraftUseCase } from "../use-cases/confirm-booking-from-draft.use-case";
+import { DokuService } from "@/src/infrastructure/doku/doku.service";
 
 const activeTelegramSentSet = new Set<string>();
 
@@ -25,11 +26,36 @@ export async function getBookingByIdAction(id: string) {
             booking = confirmedBooking;
           }
         } else {
-          return {
-            success: false,
-            isPendingWebhook: true,
-            error: "Sedang memverifikasi pembayaran Anda. Halaman ini akan memuat ulang secara otomatis...",
-          };
+          // Mode Production: Lakukan Active Inquiry ke API DOKU secara langsung jika belum ada di DB utama
+          try {
+            const dokuService = new DokuService();
+            const dokuStatus = await dokuService.checkTransactionStatus(id);
+
+            if (dokuStatus === "SUCCESS") {
+              const confirmUseCase = new ConfirmBookingFromDraftUseCase(draftRepo);
+              const confirmedBooking = await confirmUseCase.execute(id);
+              if (confirmedBooking) {
+                booking = confirmedBooking;
+              }
+            } else if (dokuStatus === "FAILED" || dokuStatus === "EXPIRED" || dokuStatus === "REVERSED") {
+              await draftRepo.deleteDraft(id).catch(() => {});
+              return {
+                success: false,
+                error: `Pembayaran ${dokuStatus}. Slot jadwal telah dilepaskan.`,
+              };
+            }
+          } catch (e) {
+            console.error("DOKU active status inquiry check error in production success page:", e);
+          }
+
+          // Jika status belum SUCCESS (misal masih PENDING), kembalikan isPendingWebhook: true agar loading & reload
+          if (!booking) {
+            return {
+              success: false,
+              isPendingWebhook: true,
+              error: "Sedang memverifikasi pembayaran Anda. Halaman ini akan memuat ulang secara otomatis...",
+            };
+          }
         }
       }
     }
